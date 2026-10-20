@@ -1,6 +1,6 @@
 # Keki Keki — Módulos Explorar y Producto (Flutter)
 
-**Integrantes:** _Brayan Fuertes_ y _Valentuna Melo_   **Repositorio:** _https://github.com/valentinamelo/keki_keki_app.git_
+**Integrantes:** _Brayan Fuertes_ y _Valentina Melo_   **Repositorio:** _https://github.com/valentinamelo/keki_keki_app.git_
 
 App Flutter sencilla basada en los mockups **02 — Catálogo** y **03 — Detalle / Personalización**.
 Solo usa el SDK de Flutter (sin paquetes externos, aún no se incluyen i imágenes: las tortas se dibujan con `CustomPaint`).
