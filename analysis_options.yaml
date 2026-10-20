@@ -1,4 +1,6 @@
+# Reglas del analizador Dart para mantener un estilo consistente.
 analyzer:
+  # Evita analizar archivos generados o proyectos de plataforma.
   exclude:
     - build/**
     - android/**

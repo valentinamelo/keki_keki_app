@@ -1,4 +1,7 @@
-/// Formatea un valor en pesos colombianos como en los mockups: $65.000
+/// Utilidades para presentar valores monetarios en la interfaz.
+///
+/// Formatea un valor en pesos colombianos como en los mockups: $65.000.
+/// [value] es el valor entero en COP que se desea mostrar.
 String cop(int value) {
   final digits = value.abs().toString();
   final buffer = StringBuffer();

@@ -1,3 +1,5 @@
+// Colores, sombras y configuración visual compartida por toda la aplicación.
+
 import 'package:flutter/material.dart';
 
 /// Paleta tomada de los mockups (variables CSS :root).
@@ -28,6 +30,7 @@ class KekiShadows {
   ];
 }
 
+/// Construye el tema Material 3 con los colores y estilos de Keki Keki.
 ThemeData buildKekiTheme() {
   final scheme = ColorScheme.fromSeed(seedColor: KekiColors.blue).copyWith(
     primary: KekiColors.blueDeep,

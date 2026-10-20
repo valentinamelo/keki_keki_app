@@ -1,8 +1,11 @@
+// Componentes visuales reutilizables: calificación, favorito y botón principal.
+
 import 'package:flutter/material.dart';
 
 import '../core/theme.dart';
 
 class RatingBadge extends StatelessWidget {
+  /// Crea el indicador de calificación o la etiqueta «Nuevo».
   const RatingBadge({
     super.key,
     required this.rating,
@@ -14,6 +17,7 @@ class RatingBadge extends StatelessWidget {
   final int? reviewCount;
   final double fontSize;
 
+  /// Dibuja una estrella y el valor, o «Nuevo» si no hay calificación.
   @override
   Widget build(BuildContext context) {
     final r = rating;
@@ -49,6 +53,7 @@ class RatingBadge extends StatelessWidget {
 }
 
 class FavButton extends StatelessWidget {
+  /// Crea un botón de favorito usando [active] para definir su apariencia.
   const FavButton({
     super.key,
     required this.active,
@@ -60,6 +65,7 @@ class FavButton extends StatelessWidget {
   final VoidCallback onTap;
   final double size;
 
+  /// Dibuja el corazón y llama a [onTap] al presionarlo.
   @override
   Widget build(BuildContext context) {
     return Material(
@@ -83,11 +89,14 @@ class FavButton extends StatelessWidget {
 }
 
 class GradientButton extends StatelessWidget {
-  const GradientButton({super.key, required this.label, required this.onPressed});
+  /// Crea un botón de acción con degradado, etiqueta y callback.
+  const GradientButton(
+      {super.key, required this.label, required this.onPressed});
 
   final String label;
   final VoidCallback onPressed;
 
+  /// Presenta la etiqueta y ejecuta la acción al tocar el botón.
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(16);

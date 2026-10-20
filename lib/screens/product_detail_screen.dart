@@ -1,3 +1,6 @@
+// Pantalla de detalle para revisar y personalizar un producto antes de
+// agregarlo al carrito.
+
 import 'package:flutter/material.dart';
 
 import '../core/format.dart';
@@ -10,14 +13,17 @@ import '../widgets/product_widgets.dart';
 
 /// Módulo Producto (mockup 03 — Detalle / Personalización).
 class ProductDetailScreen extends StatefulWidget {
+  /// Crea el detalle para el [product] recibido desde el catálogo.
   const ProductDetailScreen({super.key, required this.product});
 
   final Product product;
 
+  /// Crea el estado que guarda las opciones elegidas y la cantidad.
   @override
   State<ProductDetailScreen> createState() => _ProductDetailScreenState();
 }
 
+/// Mantiene la personalización y cantidad del producto durante la pantalla.
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   static const int _maxQty = 20;
 
@@ -25,11 +31,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       Map<String, int>.of(widget.product.defaultSelection);
   int _qty = 1;
 
+  /// Agrega la configuración actual al carrito y confirma la acción.
   void _addToCart() {
     AppScope.of(context).cart.add(widget.product, _selection, quantity: _qty);
     showKekiSnack(context, '${widget.product.name} agregado al carrito');
   }
 
+  /// Construye la ilustración, el detalle desplazable y la barra inferior fija.
   @override
   Widget build(BuildContext context) {
     final product = widget.product;
@@ -119,6 +127,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  /// Construye la ficha con precio, calificación, descripción y opciones.
   Widget _buildSheet(Product product, int unitPrice) {
     return Container(
       width: double.infinity,
@@ -267,6 +276,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 }
 
 class _OptionChip extends StatelessWidget {
+  /// Crea una opción interactiva que puede estar seleccionada o no.
   const _OptionChip({
     required this.label,
     required this.selected,
@@ -277,6 +287,7 @@ class _OptionChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Presenta la etiqueta y aplica el estilo correspondiente a su selección.
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -306,6 +317,7 @@ class _OptionChip extends StatelessWidget {
 }
 
 class _BottomBar extends StatelessWidget {
+  /// Crea la barra fija con el selector de cantidad y el botón de compra.
   const _BottomBar({
     required this.qty,
     required this.onMinus,
@@ -320,6 +332,7 @@ class _BottomBar extends StatelessWidget {
   final String label;
   final VoidCallback onAdd;
 
+  /// Dibuja controles de cantidad y botón con el precio total actualizado.
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(

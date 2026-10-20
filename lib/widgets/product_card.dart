@@ -1,3 +1,5 @@
+// Tarjeta reutilizable de producto usada en la cuadrícula del catálogo.
+
 import 'package:flutter/material.dart';
 
 import '../core/format.dart';
@@ -8,6 +10,7 @@ import 'product_widgets.dart';
 
 /// Tarjeta del grid de Explorar (mockup 02 — Catálogo).
 class ProductCard extends StatelessWidget {
+  /// Crea una tarjeta con producto, estado de favorito y acciones de usuario.
   const ProductCard({
     super.key,
     required this.product,
@@ -23,6 +26,7 @@ class ProductCard extends StatelessWidget {
   final VoidCallback onFavorite;
   final VoidCallback onAdd;
 
+  /// Presenta la ilustración y los datos principales del producto.
   @override
   Widget build(BuildContext context) {
     return Container(

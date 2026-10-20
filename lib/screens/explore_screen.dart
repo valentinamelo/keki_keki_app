@@ -1,3 +1,6 @@
+// Pantalla del catálogo con búsqueda, categorías, orden, favoritos y acceso
+// rápido al carrito.
+
 import 'package:flutter/material.dart';
 
 import '../core/snack.dart';
@@ -11,8 +14,10 @@ import 'product_detail_screen.dart';
 /// Módulo Explorar (mockup 02 — Catálogo): búsqueda, categorías, orden,
 /// favoritos y acceso rápido al carrito.
 class ExploreScreen extends StatefulWidget {
+  /// Crea la pantalla de catálogo.
   const ExploreScreen({super.key});
 
+  /// Crea el estado que conserva el texto introducido en la búsqueda.
   @override
   State<ExploreScreen> createState() => _ExploreScreenState();
 }
@@ -20,17 +25,20 @@ class ExploreScreen extends StatefulWidget {
 class _ExploreScreenState extends State<ExploreScreen> {
   final TextEditingController _search = TextEditingController();
 
+  /// Libera el controlador de búsqueda al cerrar la pantalla.
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
   }
 
+  /// Crea un borde redondeado para los estados normal y enfocado del buscador.
   OutlineInputBorder _border(Color color) => OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
         borderSide: BorderSide(color: color),
       );
 
+  /// Navega al detalle del producto seleccionado.
   void _openDetail(Product product) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -39,11 +47,13 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
+  /// Agrega el producto con sus opciones predeterminadas y muestra confirmación.
   void _quickAdd(Product product) {
     AppScope.of(context).cart.add(product, product.defaultSelection);
     showKekiSnack(context, '${product.name} agregado al carrito');
   }
 
+  /// Muestra las opciones de ordenamiento y actualiza el catálogo al elegir una.
   Future<void> _openSort(CatalogController catalog) {
     return showModalBottomSheet<void>(
       context: context,
@@ -65,7 +75,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
               ListTile(
                 title: Text(mode.label),
                 trailing: catalog.sort == mode
-                    ? const Icon(Icons.check_rounded, color: KekiColors.blueDeep)
+                    ? const Icon(Icons.check_rounded,
+                        color: KekiColors.blueDeep)
                     : null,
                 onTap: () {
                   catalog.setSort(mode);
@@ -79,6 +90,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
     );
   }
 
+  /// Construye el catálogo y escucha los cambios del controlador.
   @override
   Widget build(BuildContext context) {
     final catalog = AppScope.of(context).catalog;
@@ -110,7 +122,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                     const SizedBox(height: 3),
                     Text(
                       '$count ${count == 1 ? 'creación disponible' : 'creaciones disponibles'}',
-                      style: const TextStyle(fontSize: 12, color: KekiColors.text2),
+                      style: const TextStyle(
+                          fontSize: 12, color: KekiColors.text2),
                     ),
                   ],
                 ),
@@ -140,7 +153,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                               ? null
                               : IconButton(
                                   tooltip: 'Limpiar búsqueda',
-                                  icon: const Icon(Icons.close_rounded, size: 18),
+                                  icon:
+                                      const Icon(Icons.close_rounded, size: 18),
                                   onPressed: () {
                                     _search.clear();
                                     catalog.setQuery('');
@@ -148,7 +162,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                                 ),
                           filled: true,
                           fillColor: KekiColors.bg,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 14),
                           border: _border(KekiColors.border),
                           enabledBorder: _border(KekiColors.border),
                           focusedBorder: _border(KekiColors.blue),
@@ -212,7 +227,8 @@ class _ExploreScreenState extends State<ExploreScreen> {
                             product: product,
                             isFavorite: catalog.isFavorite(product.id),
                             onTap: () => _openDetail(product),
-                            onFavorite: () => catalog.toggleFavorite(product.id),
+                            onFavorite: () =>
+                                catalog.toggleFavorite(product.id),
                             onAdd: () => _quickAdd(product),
                           );
                         },
@@ -227,6 +243,7 @@ class _ExploreScreenState extends State<ExploreScreen> {
 }
 
 class _CategoryChip extends StatelessWidget {
+  /// Crea una etiqueta seleccionable para filtrar por categoría.
   const _CategoryChip({
     required this.label,
     required this.selected,
@@ -237,6 +254,7 @@ class _CategoryChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Dibuja la etiqueta y cambia su apariencia según [selected].
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -267,11 +285,13 @@ class _CategoryChip extends StatelessWidget {
 }
 
 class _FilterButton extends StatelessWidget {
+  /// Crea el botón que abre el menú de ordenamiento.
   const _FilterButton({required this.active, required this.onTap});
 
   final bool active;
   final VoidCallback onTap;
 
+  /// Dibuja el icono de ajustes y señala si hay un orden no predeterminado.
   @override
   Widget build(BuildContext context) {
     return Tooltip(
@@ -312,10 +332,12 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
+  /// Crea el mensaje de resultados vacíos y su acción para limpiar filtros.
   const _EmptyState({required this.onClear});
 
   final VoidCallback onClear;
 
+  /// Muestra una explicación cuando ningún producto coincide con los filtros.
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -324,7 +346,8 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.search_off_rounded, size: 48, color: KekiColors.blue),
+            const Icon(Icons.search_off_rounded,
+                size: 48, color: KekiColors.blue),
             const SizedBox(height: 12),
             const Text(
               'No encontramos productos',
@@ -337,7 +360,8 @@ class _EmptyState extends StatelessWidget {
               style: TextStyle(fontSize: 12.5, color: KekiColors.text2),
             ),
             const SizedBox(height: 8),
-            TextButton(onPressed: onClear, child: const Text('Limpiar filtros')),
+            TextButton(
+                onPressed: onClear, child: const Text('Limpiar filtros')),
           ],
         ),
       ),

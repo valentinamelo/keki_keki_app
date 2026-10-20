@@ -1,19 +1,24 @@
+// Estado y operaciones para buscar, filtrar, ordenar y marcar favoritos.
+
 import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
 
+/// Criterios de ordenamiento disponibles en Explorar.
 enum SortMode {
   relevance('Relevancia'),
   priceAsc('Precio: menor a mayor'),
   priceDesc('Precio: mayor a menor'),
   rating('Mejor calificados');
 
+  /// Asocia el criterio de orden con el texto que ve el usuario.
   const SortMode(this.label);
   final String label;
 }
 
 /// Estado del módulo Explorar: búsqueda, categoría, orden y favoritos.
 class CatalogController extends ChangeNotifier {
+  /// Inicializa el catálogo con todos los productos disponibles.
   CatalogController(this._all);
 
   final List<Product> _all;
@@ -22,8 +27,13 @@ class CatalogController extends ChangeNotifier {
   SortMode _sort = SortMode.relevance;
   final Set<String> _favorites = <String>{};
 
+  /// Texto de búsqueda actual.
   String get query => _query;
+
+  /// Categoría activa; `null` significa que se muestran todas.
   ProductCategory? get category => _category;
+
+  /// Criterio de ordenamiento activo.
   SortMode get sort => _sort;
 
   /// Productos que cumplen búsqueda + categoría, ya ordenados.
@@ -53,38 +63,44 @@ class CatalogController extends ChangeNotifier {
     return list;
   }
 
+  /// Cambia la búsqueda y notifica a la interfaz si el texto es diferente.
   void setQuery(String value) {
     if (value == _query) return;
     _query = value;
     notifyListeners();
   }
 
+  /// Selecciona una categoría, o todas si [value] es `null`.
   void setCategory(ProductCategory? value) {
     if (value == _category) return;
     _category = value;
     notifyListeners();
   }
 
+  /// Cambia el orden de los resultados y avisa a la interfaz.
   void setSort(SortMode value) {
     if (value == _sort) return;
     _sort = value;
     notifyListeners();
   }
 
+  /// Borra la búsqueda y la categoría seleccionada.
   void clearFilters() {
     _query = '';
     _category = null;
     notifyListeners();
   }
 
+  /// Indica si el producto identificado por [productId] está en favoritos.
   bool isFavorite(String productId) => _favorites.contains(productId);
 
+  /// Alterna el estado de favorito del producto y notifica a la interfaz.
   void toggleFavorite(String productId) {
     if (!_favorites.remove(productId)) _favorites.add(productId);
     notifyListeners();
   }
 
-  /// Minúsculas y sin tildes, para que "torta" encuentre "Tórtá".
+  /// Pasa el texto a minúsculas y elimina tildes para facilitar coincidencias.
   static String _normalize(String s) {
     const from = 'áàäâéèëêíìïîóòöôúùüûñ';
     const to = 'aaaaeeeeiiiioooouuuun';

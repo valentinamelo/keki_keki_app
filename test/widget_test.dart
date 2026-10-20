@@ -1,15 +1,19 @@
+// Pruebas del formato COP y del recorrido principal de compra en la interfaz.
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:keki_keki/core/format.dart';
 import 'package:keki_keki/main.dart';
 import 'package:keki_keki/widgets/product_widgets.dart';
 
 void main() {
+  // Verifica que los importes se presenten con separadores colombianos.
   test('cop formatea pesos colombianos', () {
     expect(cop(65000), '\$65.000');
     expect(cop(1284000), '\$1.284.000');
     expect(cop(900), '\$900');
   });
 
+  // Comprueba filtros, apertura del detalle y agregado de un producto.
   testWidgets(
       'Explorar filtra por categoría, abre el detalle y agrega al carrito',
       (tester) async {

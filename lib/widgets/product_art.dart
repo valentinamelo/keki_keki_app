@@ -1,18 +1,23 @@
+// Ilustraciones vectoriales de los productos y funciones para dibujarlas.
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
 import '../models/product.dart';
 
+/// Devuelve la etiqueta compartida por la ilustración en tarjeta y detalle.
 String artHeroTag(String productId) => 'art-$productId';
 
 /// Ilustración vectorial del producto, dibujada con CustomPainter a partir de
 /// los SVG de los mockups (lienzo de referencia 170 x 118).
 class ProductArt extends StatelessWidget {
+  /// Crea la ilustración del tipo [kind].
   const ProductArt({super.key, required this.kind});
 
   final ArtKind kind;
 
+  /// Entrega al lienzo el pintor que dibuja el tipo de producto solicitado.
   @override
   Widget build(BuildContext context) {
     return CustomPaint(painter: _ArtPainter(kind), size: Size.infinite);
@@ -20,6 +25,7 @@ class ProductArt extends StatelessWidget {
 }
 
 class _Palette {
+  /// Agrupa los colores de fondo, sombra y contorno de una ilustración.
   const _Palette(this.bg, this.shadow, this.stroke);
   final Color bg;
   final Color shadow;
@@ -27,6 +33,7 @@ class _Palette {
 }
 
 class _Dot {
+  /// Define una decoración circular por posición, radio y color.
   const _Dot(this.x, this.y, this.r, this.color);
   final double x;
   final double y;
@@ -41,6 +48,7 @@ const _brown =
 const _cream =
     _Palette(Color(0xFFFBF6E9), Color(0x33B98A3E), Color(0xFFEADFC0));
 
+/// Selecciona la paleta de colores correspondiente al tipo de producto.
 _Palette _paletteFor(ArtKind kind) {
   switch (kind) {
     case ArtKind.roseCake:
@@ -57,14 +65,17 @@ _Palette _paletteFor(ArtKind kind) {
   }
 }
 
+/// Crea una brocha de relleno con el color [c].
 Paint _fill(Color c) => Paint()..color = c;
 
+/// Crea una brocha de contorno con color [c] y grosor [w].
 Paint _line(Color c, double w) => Paint()
   ..color = c
   ..style = PaintingStyle.stroke
   ..strokeWidth = w;
 
 /// Franja ondulada (glaseado) de [w] de ancho y [thick] de grosor.
+/// Los demás parámetros ajustan el número, amplitud y grosor de las ondas.
 Path _wave(double x, double y, double w,
     {int n = 3, double amp = 8, double thick = 5}) {
   final seg = w / n;
@@ -84,6 +95,7 @@ Path _wave(double x, double y, double w,
   return path;
 }
 
+/// Dibuja el cuerpo, glaseado y decoraciones de una torta.
 void _drawCake(
   Canvas c, {
   required Color stroke,
@@ -102,6 +114,7 @@ void _drawCake(
   }
 }
 
+/// Dibuja un cupcake centrado en [cx] con los colores recibidos.
 void _drawCupcake(Canvas c, double cx, Color frosting, Color cherry) {
   final liner = Path()
     ..moveTo(cx - 14, 66)
@@ -115,6 +128,7 @@ void _drawCupcake(Canvas c, double cx, Color frosting, Color cherry) {
   c.drawCircle(Offset(cx, 45), 4, _fill(cherry));
 }
 
+/// Dibuja un brownie rectangular con cobertura y trozos decorativos.
 void _drawBrownie(Canvas c) {
   final body = RRect.fromRectAndRadius(
     Rect.fromLTWH(46, 58, 78, 38),
@@ -137,6 +151,7 @@ void _drawBrownie(Canvas c) {
   }
 }
 
+/// Dibuja tres galletas con chispas de chocolate.
 void _drawCookies(Canvas c) {
   const chip = Color(0xFFB98A3E);
   for (final cx in const [52.0, 85.0, 118.0]) {
@@ -153,6 +168,7 @@ void _drawCookies(Canvas c) {
 }
 
 class _ArtPainter extends CustomPainter {
+  /// Crea el pintor asociado a una clase de ilustración [kind].
   const _ArtPainter(this.kind);
 
   final ArtKind kind;
@@ -160,6 +176,7 @@ class _ArtPainter extends CustomPainter {
   static const double _w = 170;
   static const double _h = 118;
 
+  /// Escala el lienzo de referencia y dibuja la ilustración correspondiente.
   @override
   void paint(Canvas canvas, Size size) {
     if (size.isEmpty) return;
@@ -239,6 +256,7 @@ class _ArtPainter extends CustomPainter {
     canvas.restore();
   }
 
+  /// Solicita repintado solo si cambió el tipo de ilustración.
   @override
   bool shouldRepaint(covariant _ArtPainter oldDelegate) =>
       oldDelegate.kind != kind;

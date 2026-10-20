@@ -1,3 +1,5 @@
+// Catálogo de productos de demostración y constructores de sus opciones.
+
 import '../models/product.dart';
 
 // ---------------------------------------------------------------------------
@@ -22,6 +24,7 @@ OptionGroup _tamanos(int basePersons) {
   );
 }
 
+/// Crea las opciones de sabor usando [defaultIndex] como selección inicial.
 OptionGroup _sabores({int defaultIndex = 0}) => OptionGroup(
       id: 'sabor',
       title: 'Sabor',
@@ -33,6 +36,7 @@ OptionGroup _sabores({int defaultIndex = 0}) => OptionGroup(
       ],
     );
 
+/// Crea las opciones de relleno y decoración de una torta.
 OptionGroup _rellenos() => const OptionGroup(
       id: 'relleno',
       title: 'Relleno & decoración',
@@ -43,12 +47,14 @@ OptionGroup _rellenos() => const OptionGroup(
       ],
     );
 
+/// Crea una opción de presentación con las alternativas recibidas.
 OptionGroup _presentacion(List<OptionChoice> choices) => OptionGroup(
       id: 'presentacion',
       title: 'Presentación',
       choices: choices,
     );
 
+/// Productos de muestra que alimentan el catálogo al iniciar la aplicación.
 final List<Product> kProducts = [
   Product(
     id: 'torta-fresa-silvestre',
@@ -81,8 +87,7 @@ final List<Product> kProducts = [
     id: 'cupcakes-duo-pastel',
     name: 'Cupcakes duo pastel',
     category: ProductCategory.cupcakes,
-    description:
-        'Cupcakes de vainilla con crema en tonos azul y rosa pastel.',
+    description: 'Cupcakes de vainilla con crema en tonos azul y rosa pastel.',
     basePrice: 22000,
     rating: 4.5,
     art: ArtKind.cupcakes,

@@ -1,3 +1,5 @@
+// Contenedor principal, navegación inferior y vista provisional del carrito.
+
 import 'package:flutter/material.dart';
 
 import '../core/format.dart';
@@ -11,8 +13,10 @@ import 'explore_screen.dart';
 /// están implementados; Inicio y Perfil son marcadores de posición y Carrito
 /// es una vista provisional para comprobar que "Agregar" funciona.
 class HomeShell extends StatefulWidget {
+  /// Crea el contenedor principal de las pestañas.
   const HomeShell({super.key});
 
+  /// Crea el estado que conserva la pestaña seleccionada.
   @override
   State<HomeShell> createState() => _HomeShellState();
 }
@@ -20,6 +24,7 @@ class HomeShell extends StatefulWidget {
 class _HomeShellState extends State<HomeShell> {
   int _tab = 1; // Explorar
 
+  /// Construye las pestañas y escucha cambios para actualizar el contador.
   @override
   Widget build(BuildContext context) {
     final cart = AppScope.of(context).cart;
@@ -56,6 +61,7 @@ class _HomeShellState extends State<HomeShell> {
 }
 
 class _KekiBottomNav extends StatelessWidget {
+  /// Crea la navegación inferior con la pestaña activa y total del carrito.
   const _KekiBottomNav({
     required this.current,
     required this.cartCount,
@@ -68,6 +74,7 @@ class _KekiBottomNav extends StatelessWidget {
   final ValueChanged<int> onSelect;
   final VoidCallback onAi;
 
+  /// Dibuja las pestañas y el acceso central al asistente de IA.
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
@@ -80,45 +87,45 @@ class _KekiBottomNav extends StatelessWidget {
         child: Material(
           type: MaterialType.transparency,
           child: SizedBox(
-          height: 66,
-          child: Row(
-            children: [
-              _NavItem(
-                icon: Icons.home_outlined,
-                label: 'Inicio',
-                selected: current == 0,
-                onTap: () => onSelect(0),
-              ),
-              _NavItem(
-                icon: Icons.explore_outlined,
-                label: 'Explorar',
-                selected: current == 1,
-                onTap: () => onSelect(1),
-              ),
-              Expanded(
-                child: Center(
-                  child: Transform.translate(
-                    offset: const Offset(0, -10),
-                    child: _AiFab(onTap: onAi),
+            height: 66,
+            child: Row(
+              children: [
+                _NavItem(
+                  icon: Icons.home_outlined,
+                  label: 'Inicio',
+                  selected: current == 0,
+                  onTap: () => onSelect(0),
+                ),
+                _NavItem(
+                  icon: Icons.explore_outlined,
+                  label: 'Explorar',
+                  selected: current == 1,
+                  onTap: () => onSelect(1),
+                ),
+                Expanded(
+                  child: Center(
+                    child: Transform.translate(
+                      offset: const Offset(0, -10),
+                      child: _AiFab(onTap: onAi),
+                    ),
                   ),
                 ),
-              ),
-              _NavItem(
-                icon: Icons.shopping_cart_outlined,
-                label: 'Carrito',
-                selected: current == 2,
-                badge: cartCount,
-                onTap: () => onSelect(2),
-              ),
-              _NavItem(
-                icon: Icons.person_outline_rounded,
-                label: 'Perfil',
-                selected: current == 3,
-                onTap: () => onSelect(3),
-              ),
-            ],
+                _NavItem(
+                  icon: Icons.shopping_cart_outlined,
+                  label: 'Carrito',
+                  selected: current == 2,
+                  badge: cartCount,
+                  onTap: () => onSelect(2),
+                ),
+                _NavItem(
+                  icon: Icons.person_outline_rounded,
+                  label: 'Perfil',
+                  selected: current == 3,
+                  onTap: () => onSelect(3),
+                ),
+              ],
+            ),
           ),
-        ),
         ),
       ),
     );
@@ -126,6 +133,7 @@ class _KekiBottomNav extends StatelessWidget {
 }
 
 class _NavItem extends StatelessWidget {
+  /// Crea una pestaña de navegación con icono, etiqueta y contador opcional.
   const _NavItem({
     required this.icon,
     required this.label,
@@ -140,6 +148,7 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
   final int badge;
 
+  /// Dibuja el elemento y ejecuta [onTap] al seleccionarlo.
   @override
   Widget build(BuildContext context) {
     final color = selected ? KekiColors.blueDeep : const Color(0xFFB9C0C6);
@@ -158,7 +167,8 @@ class _NavItem extends StatelessWidget {
                     right: -9,
                     top: -5,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: KekiColors.pinkDeep,
                         borderRadius: BorderRadius.circular(999),
@@ -192,10 +202,12 @@ class _NavItem extends StatelessWidget {
 }
 
 class _AiFab extends StatelessWidget {
+  /// Crea el botón decorativo que representa el asistente de IA.
   const _AiFab({required this.onTap});
 
   final VoidCallback onTap;
 
+  /// Dibuja el botón y ejecuta la acción asociada cuando se toca.
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(15);
@@ -225,7 +237,8 @@ class _AiFab extends StatelessWidget {
           child: InkWell(
             borderRadius: radius,
             onTap: onTap,
-            child: const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
+            child:
+                const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
           ),
         ),
       ),
@@ -234,6 +247,7 @@ class _AiFab extends StatelessWidget {
 }
 
 class _Placeholder extends StatelessWidget {
+  /// Crea una pantalla informativa para una función aún no implementada.
   const _Placeholder({
     required this.icon,
     required this.title,
@@ -244,6 +258,7 @@ class _Placeholder extends StatelessWidget {
   final String title;
   final String message;
 
+  /// Centra el icono, título y explicación del marcador de posición.
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -257,7 +272,8 @@ class _Placeholder extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 title,
-                style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
@@ -275,8 +291,10 @@ class _Placeholder extends StatelessWidget {
 
 /// Vista provisional del carrito (solo lectura) para validar "Agregar".
 class _CartTab extends StatelessWidget {
+  /// Crea la pestaña que muestra el contenido actual del carrito.
   const _CartTab();
 
+  /// Muestra el carrito vacío o sus productos y el total acumulado.
   @override
   Widget build(BuildContext context) {
     final cart = AppScope.of(context).cart;
@@ -306,16 +324,19 @@ class _CartTab extends StatelessWidget {
                         children: [
                           const Text(
                             'Tu carrito',
-                            style: TextStyle(fontSize: 19, fontWeight: FontWeight.w700),
+                            style: TextStyle(
+                                fontSize: 19, fontWeight: FontWeight.w700),
                           ),
                           Text(
                             '${cart.count} ${cart.count == 1 ? 'producto' : 'productos'} · vista provisional',
-                            style: const TextStyle(fontSize: 12, color: KekiColors.text2),
+                            style: const TextStyle(
+                                fontSize: 12, color: KekiColors.text2),
                           ),
                         ],
                       ),
                     ),
-                    TextButton(onPressed: cart.clear, child: const Text('Vaciar')),
+                    TextButton(
+                        onPressed: cart.clear, child: const Text('Vaciar')),
                   ],
                 ),
               ),
@@ -396,7 +417,8 @@ class _CartTab extends StatelessWidget {
                   children: [
                     const Text(
                       'Total',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                     ),
                     Text(
                       cop(cart.total),
