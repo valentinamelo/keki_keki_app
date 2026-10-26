@@ -1,0 +1,59 @@
+rules_version = '2';
+
+// Reglas de seguridad de Keki Keki.
+// - usuarios: cada persona lee y edita su propio perfil, pero no su rol.
+//   El rol "admin" solo se asigna desde la consola de Firebase.
+// - productos: cualquier usuario con sesión los lee; solo el admin escribe.
+// - pedidos: el cliente crea y lee solo los suyos; solo el admin cambia el estado.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.rol == 'admin';
+    }
+
+    match /usuarios/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || isAdmin());
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.rol == 'cliente';
+      allow update: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.rol == resource.data.rol;
+      allow delete: if false;
+    }
+
+    match /productos/{productId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /pedidos/{orderId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.clienteId == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.clienteId == request.auth.uid
+        && request.resource.data.estado == 'pendiente'
+        && request.resource.data.origen in ['catalogo', 'ia']
+        && request.resource.data.items is list
+        && request.resource.data.items.size() > 0
+        && request.resource.data.total is int
+        && request.resource.data.total > 0
+        && request.resource.data.creado == request.time;
+
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['estado', 'actualizado', 'historial'])
+        && request.resource.data.estado in
+             ['pendiente', 'en_preparacion', 'listo', 'entregado', 'cancelado'];
+
+      allow delete: if false;
+    }
+  }
+}

@@ -1,5 +1,7 @@
 // Estado y operaciones para buscar, filtrar, ordenar y marcar favoritos.
 
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 
 import '../models/product.dart';
@@ -17,15 +19,43 @@ enum SortMode {
 }
 
 /// Estado del módulo Explorar: búsqueda, categoría, orden y favoritos.
+/// Los productos llegan de [source] (la colección `productos` de Firestore)
+/// y la interfaz se actualiza sola cuando el administrador cambia algo.
 class CatalogController extends ChangeNotifier {
-  /// Inicializa el catálogo con todos los productos disponibles.
-  CatalogController(this._all);
+  /// Empieza a escuchar el catálogo emitido por [source].
+  CatalogController(Stream<List<Product>> source) {
+    _subscription = source.listen(
+      (products) {
+        _all = products;
+        _loading = false;
+        _error = null;
+        notifyListeners();
+      },
+      onError: (Object e) {
+        _loading = false;
+        _error = e;
+        notifyListeners();
+      },
+    );
+  }
 
-  final List<Product> _all;
+  late final StreamSubscription<List<Product>> _subscription;
+  List<Product> _all = const [];
+  bool _loading = true;
+  Object? _error;
   String _query = '';
   ProductCategory? _category;
   SortMode _sort = SortMode.relevance;
   final Set<String> _favorites = <String>{};
+
+  /// `true` hasta que llega la primera respuesta de la base de datos.
+  bool get loading => _loading;
+
+  /// Último error al leer el catálogo, o `null` si todo va bien.
+  Object? get error => _error;
+
+  /// Cantidad de productos disponibles, sin contar filtros.
+  int get totalCount => _all.length;
 
   /// Texto de búsqueda actual.
   String get query => _query;
@@ -98,6 +128,13 @@ class CatalogController extends ChangeNotifier {
   void toggleFavorite(String productId) {
     if (!_favorites.remove(productId)) _favorites.add(productId);
     notifyListeners();
+  }
+
+  /// Deja de escuchar la base de datos al cerrar la sesión.
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
   }
 
   /// Pasa el texto a minúsculas y elimina tildes para facilitar coincidencias.

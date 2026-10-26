@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "537609770699",
+    "project_id": "keki-keki",
+    "storage_bucket": "keki-keki.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:537609770699:android:a4dd5ebd2a49e7f2862d4e",
+        "android_client_info": {
+          "package_name": "com.example.keki_keki"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "537609770699-spv5509bv1ldh7e0a7l95f78nvi5f436.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCnWnC8aop1X8zAHA7S9YfNwTMuZ_wCZjo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "537609770699-spv5509bv1ldh7e0a7l95f78nvi5f436.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

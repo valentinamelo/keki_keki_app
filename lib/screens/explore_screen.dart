@@ -8,11 +8,12 @@ import '../core/theme.dart';
 import '../models/product.dart';
 import '../state/app_scope.dart';
 import '../state/catalog_controller.dart';
+import '../widgets/keki_nav.dart';
 import '../widgets/product_card.dart';
 import 'product_detail_screen.dart';
 
 /// Módulo Explorar (mockup 02 — Catálogo): búsqueda, categorías, orden,
-/// favoritos y acceso rápido al carrito.
+/// favoritos y acceso rápido al carrito. Los productos llegan de Firestore.
 class ExploreScreen extends StatefulWidget {
   /// Crea la pantalla de catálogo.
   const ExploreScreen({super.key});
@@ -204,35 +205,55 @@ class _ExploreScreenState extends State<ExploreScreen> {
                 ),
               ),
               Expanded(
-                child: items.isEmpty
-                    ? _EmptyState(
-                        onClear: () {
-                          _search.clear();
-                          catalog.clearFilters();
-                        },
+                child: catalog.loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                            color: KekiColors.blueDeep),
                       )
-                    : GridView.builder(
-                        padding: const EdgeInsets.fromLTRB(22, 2, 22, 20),
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 200,
-                          crossAxisSpacing: 14,
-                          mainAxisSpacing: 14,
-                          mainAxisExtent: 252,
-                        ),
-                        itemCount: items.length,
-                        itemBuilder: (context, i) {
-                          final product = items[i];
-                          return ProductCard(
-                            product: product,
-                            isFavorite: catalog.isFavorite(product.id),
-                            onTap: () => _openDetail(product),
-                            onFavorite: () =>
-                                catalog.toggleFavorite(product.id),
-                            onAdd: () => _quickAdd(product),
-                          );
-                        },
-                      ),
+                    : catalog.error != null
+                        ? InfoPlaceholder(
+                            icon: Icons.cloud_off_rounded,
+                            title: 'No pudimos cargar el catálogo',
+                            message: '${catalog.error}',
+                          )
+                        : catalog.totalCount == 0
+                            ? const InfoPlaceholder(
+                                icon: Icons.inventory_2_outlined,
+                                title: 'Aún no hay productos',
+                                message:
+                                    'La pastelería está preparando su catálogo.',
+                              )
+                            : items.isEmpty
+                                ? _EmptyState(
+                                    onClear: () {
+                                      _search.clear();
+                                      catalog.clearFilters();
+                                    },
+                                  )
+                                : GridView.builder(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        22, 2, 22, 20),
+                                    gridDelegate:
+                                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                                      maxCrossAxisExtent: 200,
+                                      crossAxisSpacing: 14,
+                                      mainAxisSpacing: 14,
+                                      mainAxisExtent: 252,
+                                    ),
+                                    itemCount: items.length,
+                                    itemBuilder: (context, i) {
+                                      final product = items[i];
+                                      return ProductCard(
+                                        product: product,
+                                        isFavorite:
+                                            catalog.isFavorite(product.id),
+                                        onTap: () => _openDetail(product),
+                                        onFavorite: () =>
+                                            catalog.toggleFavorite(product.id),
+                                        onAdd: () => _quickAdd(product),
+                                      );
+                                    },
+                                  ),
               ),
             ],
           );

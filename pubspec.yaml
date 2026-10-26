@@ -1,6 +1,6 @@
 # Identidad, versión y dependencias del proyecto Flutter.
 name: keki_keki
-description: Keki Keki - Pastelería Inteligente. Módulos Explorar y Producto.
+description: Keki Keki - Pastelería Inteligente. Tienda del cliente y gestión de pedidos con Firebase.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -9,6 +9,9 @@ environment:
 
 # Paquetes usados por la aplicación y las pruebas.
 dependencies:
+  cloud_firestore: ^7.1.0
+  firebase_auth: ^7.0.1
+  firebase_core: ^5.1.0
   flutter:
     sdk: flutter
 
