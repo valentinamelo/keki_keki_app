@@ -13,10 +13,13 @@ import 'services.dart';
 /// `cliente@keki.co` y `admin@keki.co`, ambas con la contraseña `123456`.
 /// Si se indica [signedIn], la app arranca con esa sesión iniciada.
 AppServices memoryServices({AppUser? signedIn}) {
+  final auth = MemoryAuthService(signedIn: signedIn);
+  final products = MemoryProductRepository(kProducts);
   return AppServices(
-    auth: MemoryAuthService(signedIn: signedIn),
-    products: MemoryProductRepository(kProducts),
-    orders: MemoryOrderRepository(),
+    auth: auth,
+    users: auth,
+    products: products,
+    orders: MemoryOrderRepository(products: products),
   );
 }
 
@@ -41,8 +44,9 @@ Stream<T> _current<T>(T Function() read, Stream<void> changes) async* {
   yield* changes.map((_) => read());
 }
 
-/// Autenticación simulada con cuentas guardadas en un mapa.
-class MemoryAuthService implements AuthService {
+/// Autenticación simulada con cuentas guardadas en un mapa. También guarda
+/// los favoritos de cada cuenta, como el documento `usuarios/{uid}`.
+class MemoryAuthService implements AuthService, UserRepository {
   /// Crea el servicio, opcionalmente con una sesión [signedIn] ya iniciada.
   MemoryAuthService({AppUser? signedIn}) : _user = signedIn;
 
@@ -97,6 +101,21 @@ class MemoryAuthService implements AuthService {
     _user = null;
     _changes.add(null);
   }
+
+  @override
+  Future<void> setFavorite(String uid, String productId, bool favorite) async {
+    for (final entry in _accounts.entries) {
+      final (user, password) = entry.value;
+      if (user.uid != uid) continue;
+      final favorites = {...user.favorites};
+      favorite ? favorites.add(productId) : favorites.remove(productId);
+      final updated = user.copyWith(favorites: favorites);
+      _accounts[entry.key] = (updated, password);
+      if (_user?.uid == uid) _user = updated;
+      _changes.add(null);
+      return;
+    }
+  }
 }
 
 /// Catálogo en memoria.
@@ -105,6 +124,7 @@ class MemoryProductRepository implements ProductRepository {
   MemoryProductRepository(List<Product> initial) : _products = [...initial];
 
   List<Product> _products;
+  int _nextId = 1;
   final StreamController<void> _changes = StreamController.broadcast();
 
   @override
@@ -118,13 +138,62 @@ class MemoryProductRepository implements ProductRepository {
 
   @override
   Future<void> seed(List<Product> products) async {
-    _products = [...products];
+    // Igual que en Firestore: reemplaza los de ejemplo y conserva los demás.
+    final ids = {for (final p in products) p.id};
+    _products = [...products, ..._products.where((p) => !ids.contains(p.id))];
+    _changes.add(null);
+  }
+
+  @override
+  Future<String> save(Product product) async {
+    final id = product.id.isNotEmpty ? product.id : 'producto-${_nextId++}';
+    final saved = Product.fromMap(id, product.toMap());
+    final i = _products.indexWhere((p) => p.id == id);
+    if (i >= 0) {
+      _products[i] = saved;
+    } else {
+      _products.add(saved);
+    }
+    _changes.add(null);
+    return id;
+  }
+
+  @override
+  Future<void> setActive(String id, bool active) async {
+    _update(id, (map) => map['activo'] = active);
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _products.removeWhere((p) => p.id == id);
+    _changes.add(null);
+  }
+
+  /// Suma [delta] al stock de [id] sin bajar de cero.
+  void adjustStock(String id, int delta) {
+    _update(id, (map) {
+      final next = (map['stock'] as int) + delta;
+      map['stock'] = next < 0 ? 0 : next;
+    });
+  }
+
+  /// Modifica el producto [id] a través de su mapa, como haría Firestore.
+  void _update(String id, void Function(Map<String, dynamic> map) change) {
+    final i = _products.indexWhere((p) => p.id == id);
+    if (i < 0) return;
+    final map = _products[i].toMap();
+    change(map);
+    _products[i] = Product.fromMap(id, map);
     _changes.add(null);
   }
 }
 
 /// Pedidos en memoria; cada cambio se emite a todos los que escuchan.
 class MemoryOrderRepository implements OrderRepository {
+  /// Crea el repositorio; con [products] también ajusta el stock.
+  MemoryOrderRepository({this.products});
+
+  final MemoryProductRepository? products;
   final List<Order> _orders = [];
   final StreamController<void> _changes = StreamController.broadcast();
   int _nextId = 1;
@@ -164,6 +233,11 @@ class MemoryOrderRepository implements OrderRepository {
     final i = _orders.indexWhere((o) => o.id == id);
     if (i < 0) return;
     final order = _orders[i];
+    final sign = order.status.stockSignTo(status);
+    if (sign != 0) {
+      unitsByProduct(order).forEach(
+          (productId, units) => products?.adjustStock(productId, sign * units));
+    }
     _orders[i] = order.copyWith(
       status: status,
       history: {...order.history, status: DateTime.now()},

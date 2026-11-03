@@ -56,3 +56,11 @@ String clock(DateTime d) {
   final m = d.minute.toString().padLeft(2, '0');
   return '$h:$m ${d.hour < 12 ? 'AM' : 'PM'}';
 }
+
+/// Saludo según la hora: «Buenos días», «Buenas tardes» o «Buenas noches».
+String greeting([DateTime? now]) {
+  final hour = (now ?? DateTime.now()).hour;
+  if (hour < 12) return 'Buenos días';
+  if (hour < 19) return 'Buenas tardes';
+  return 'Buenas noches';
+}

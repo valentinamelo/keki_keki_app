@@ -1,10 +1,12 @@
 rules_version = '2';
 
 // Reglas de seguridad de Keki Keki.
-// - usuarios: cada persona lee y edita su propio perfil, pero no su rol.
-//   El rol "admin" solo se asigna desde la consola de Firebase.
-// - productos: cualquier usuario con sesión los lee; solo el admin escribe.
-// - pedidos: el cliente crea y lee solo los suyos; solo el admin cambia el estado.
+// - usuarios: cada persona lee su perfil y solo cambia nombre, teléfono y
+//   favoritos. El rol "admin" solo se asigna desde la consola de Firebase.
+// - productos: cualquier usuario con sesión los lee; solo el admin escribe
+//   (crear, editar, activar, borrar y ajustar stock).
+// - pedidos: el cliente crea y lee solo los suyos; solo el admin cambia el
+//   estado y registra pedidos manuales.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -24,7 +26,8 @@ service cloud.firestore {
         && request.resource.data.rol == 'cliente';
       allow update: if signedIn()
         && request.auth.uid == uid
-        && request.resource.data.rol == resource.data.rol;
+        && request.resource.data.diff(resource.data).affectedKeys()
+             .hasOnly(['nombre', 'telefono', 'favoritos']);
       allow delete: if false;
     }
 
@@ -40,7 +43,8 @@ service cloud.firestore {
       allow create: if signedIn()
         && request.resource.data.clienteId == request.auth.uid
         && request.resource.data.estado == 'pendiente'
-        && request.resource.data.origen in ['catalogo', 'ia']
+        && request.resource.data.origen in ['catalogo', 'ia', 'manual']
+        && (request.resource.data.origen != 'manual' || isAdmin())
         && request.resource.data.items is list
         && request.resource.data.items.size() > 0
         && request.resource.data.total is int

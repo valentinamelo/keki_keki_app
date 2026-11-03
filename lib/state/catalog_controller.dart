@@ -18,12 +18,20 @@ enum SortMode {
   final String label;
 }
 
+/// Guarda en la cuenta del usuario que [productId] es (o deja de ser) favorito.
+typedef FavoriteSaver = Future<void> Function(String productId, bool favorite);
+
 /// Estado del módulo Explorar: búsqueda, categoría, orden y favoritos.
 /// Los productos llegan de [source] (la colección `productos` de Firestore)
 /// y la interfaz se actualiza sola cuando el administrador cambia algo.
 class CatalogController extends ChangeNotifier {
-  /// Empieza a escuchar el catálogo emitido por [source].
-  CatalogController(Stream<List<Product>> source) {
+  /// Empieza a escuchar el catálogo emitido por [source]. [favorites] son los
+  /// favoritos guardados en la cuenta y [saveFavorite] los guarda al cambiar.
+  CatalogController(
+    Stream<List<Product>> source, {
+    Set<String> favorites = const {},
+    this.saveFavorite,
+  }) : _favorites = {...favorites} {
     _subscription = source.listen(
       (products) {
         _all = products;
@@ -46,7 +54,10 @@ class CatalogController extends ChangeNotifier {
   String _query = '';
   ProductCategory? _category;
   SortMode _sort = SortMode.relevance;
-  final Set<String> _favorites = <String>{};
+  final Set<String> _favorites;
+
+  /// Persiste cada cambio de favorito; `null` los deja solo en memoria.
+  final FavoriteSaver? saveFavorite;
 
   /// `true` hasta que llega la primera respuesta de la base de datos.
   bool get loading => _loading;
@@ -65,6 +76,17 @@ class CatalogController extends ChangeNotifier {
 
   /// Criterio de ordenamiento activo.
   SortMode get sort => _sort;
+
+  /// Mejor calificados primero: los «Destacados de la semana» del Inicio.
+  List<Product> get featured {
+    final list = _all.where((p) => p.rating != null).toList()
+      ..sort((a, b) => b.rating!.compareTo(a.rating!));
+    return list.take(5).toList();
+  }
+
+  /// Productos marcados como favoritos, en el orden del catálogo.
+  List<Product> get favoriteProducts =>
+      _all.where((p) => _favorites.contains(p.id)).toList();
 
   /// Productos que cumplen búsqueda + categoría, ya ordenados.
   List<Product> get results {
@@ -124,9 +146,31 @@ class CatalogController extends ChangeNotifier {
   /// Indica si el producto identificado por [productId] está en favoritos.
   bool isFavorite(String productId) => _favorites.contains(productId);
 
-  /// Alterna el estado de favorito del producto y notifica a la interfaz.
-  void toggleFavorite(String productId) {
-    if (!_favorites.remove(productId)) _favorites.add(productId);
+  /// Alterna el favorito al instante y lo guarda en la cuenta. Si no se
+  /// puede guardar (por ejemplo, sin permisos), se revierte el cambio.
+  Future<void> toggleFavorite(String productId) async {
+    final favorite = !_favorites.contains(productId);
+    _setLocal(productId, favorite);
+    try {
+      await saveFavorite?.call(productId, favorite);
+    } catch (_) {
+      _setLocal(productId, !favorite);
+    }
+  }
+
+  /// Reemplaza los favoritos con los que llegan de la cuenta (por ejemplo,
+  /// si se marcaron desde otro dispositivo).
+  void syncFavorites(Set<String> favorites) {
+    if (setEquals(favorites, _favorites)) return;
+    _favorites
+      ..clear()
+      ..addAll(favorites);
+    notifyListeners();
+  }
+
+  /// Cambia el favorito solo en memoria y avisa a la interfaz.
+  void _setLocal(String productId, bool favorite) {
+    favorite ? _favorites.add(productId) : _favorites.remove(productId);
     notifyListeners();
   }
 

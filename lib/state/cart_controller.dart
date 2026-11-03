@@ -173,7 +173,8 @@ class CartController extends ChangeNotifier {
   }
 
   /// Construye el pedido de [user] con el contenido actual del carrito.
-  Order buildOrder(AppUser user) {
+  /// [origin] indica desde dónde se hizo (catálogo, asistente o manual).
+  Order buildOrder(AppUser user, {OrderOrigin origin = OrderOrigin.catalogo}) {
     final day = _date!;
     return Order(
       clientId: user.uid,
@@ -186,18 +187,23 @@ class CartController extends ChangeNotifier {
       deliverySlot: _slot!.label,
       address: _mode == DeliveryMode.domicilio ? _address : '',
       notes: _notes,
+      origin: origin,
     );
   }
 
   /// Crea el pedido en [orders] y, si se guarda, vacía el carrito y la
   /// fecha elegida. Devuelve el identificador del pedido.
-  Future<String> placeOrder(OrderRepository orders, AppUser user) async {
+  Future<String> placeOrder(
+    OrderRepository orders,
+    AppUser user, {
+    OrderOrigin origin = OrderOrigin.catalogo,
+  }) async {
     final missing = missingInfo;
     if (missing != null) throw StateError(missing);
     _submitting = true;
     notifyListeners();
     try {
-      final id = await orders.create(buildOrder(user));
+      final id = await orders.create(buildOrder(user, origin: origin));
       _lines.clear();
       _date = null;
       _slot = null;

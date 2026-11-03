@@ -102,7 +102,8 @@ class _AuthGateState extends State<AuthGate> {
 }
 
 /// Crea los controladores de una sesión y los comparte con [AppScope].
-/// Se destruyen al cerrar sesión, así el carrito no pasa a otra cuenta.
+/// Se destruyen al cerrar sesión, así el carrito no pasa a otra cuenta; los
+/// favoritos, en cambio, se guardan en la cuenta y vuelven al iniciar sesión.
 class SessionScope extends StatefulWidget {
   /// Crea el alcance de la sesión de [user].
   const SessionScope({
@@ -122,9 +123,21 @@ class SessionScope extends StatefulWidget {
 }
 
 class _SessionScopeState extends State<SessionScope> {
-  late final CatalogController _catalog =
-      CatalogController(widget.services.products.watchProducts());
+  late final CatalogController _catalog = CatalogController(
+    widget.services.products.watchProducts(),
+    favorites: widget.user.favorites,
+    saveFavorite: (productId, favorite) =>
+        widget.services.users.setFavorite(widget.user.uid, productId, favorite),
+  );
   final CartController _cart = CartController();
+
+  /// El perfil se vuelve a emitir cuando cambia en la base de datos (por
+  /// ejemplo, favoritos marcados en otro dispositivo): se sincronizan.
+  @override
+  void didUpdateWidget(SessionScope oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _catalog.syncFavorites(widget.user.favorites);
+  }
 
   /// Libera los controladores y sus suscripciones a la base de datos.
   @override

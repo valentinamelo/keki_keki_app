@@ -7,10 +7,11 @@ import '../state/app_scope.dart';
 import '../widgets/keki_nav.dart';
 import 'cart_screen.dart';
 import 'explore_screen.dart';
+import 'home_screen.dart';
 import 'profile_screen.dart';
 
-/// Contenedor con la barra inferior del mockup. Explorar, Carrito y Perfil
-/// están implementados; Inicio llega en la entrega 3 y el asistente en la 4.
+/// Contenedor con la barra inferior del mockup: Inicio, Explorar, Carrito y
+/// Perfil. El botón central del asistente llega en la entrega 4.
 class HomeShell extends StatefulWidget {
   /// Crea el contenedor principal de las pestañas.
   const HomeShell({super.key});
@@ -21,10 +22,11 @@ class HomeShell extends StatefulWidget {
 }
 
 class _HomeShellState extends State<HomeShell> {
+  static const int _home = 0;
   static const int _explore = 1;
   static const int _profile = 3;
 
-  int _tab = _explore;
+  int _tab = _home;
 
   /// Construye las pestañas y escucha el carrito para actualizar el contador.
   @override
@@ -37,10 +39,9 @@ class _HomeShellState extends State<HomeShell> {
         body: IndexedStack(
           index: _tab,
           children: [
-            const InfoPlaceholder(
-              icon: Icons.home_outlined,
-              title: 'Inicio',
-              message: 'Este módulo llega en la entrega 3.',
+            HomeScreen(
+              onOpenExplore: () => setState(() => _tab = _explore),
+              onOpenProfile: () => setState(() => _tab = _profile),
             ),
             const ExploreScreen(),
             CartScreen(

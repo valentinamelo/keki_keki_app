@@ -35,6 +35,15 @@ enum OrderStatus {
   /// Solo se cancela un pedido que todavía no está listo.
   bool get canCancel => this == pendiente || this == enPreparacion;
 
+  /// Efecto sobre el stock de pasar de este estado a [to]: `-1` descuenta las
+  /// unidades (empieza la preparación), `1` las devuelve (se cancela un pedido
+  /// que ya estaba en preparación) y `0` no cambia nada.
+  int stockSignTo(OrderStatus to) {
+    if (this == pendiente && to == enPreparacion) return -1;
+    if (this == enPreparacion && to == cancelado) return 1;
+    return 0;
+  }
+
   /// Interpreta el campo `estado` de Firestore.
   static OrderStatus fromKey(Object? key) => OrderStatus.values
       .firstWhere((s) => s.key == key, orElse: () => OrderStatus.pendiente);
@@ -56,9 +65,11 @@ enum DeliveryMode {
 }
 
 /// Canal desde el que se creó el pedido (el asistente llega en la entrega 4).
+/// [manual] es un pedido que el administrador registra para un cliente.
 enum OrderOrigin {
   catalogo('catalogo', 'Catálogo'),
-  ia('ia', 'Asistente IA');
+  ia('ia', 'Asistente IA'),
+  manual('manual', 'Pedido manual');
 
   /// Asocia el origen con su valor en Firestore y su etiqueta.
   const OrderOrigin(this.key, this.label);
@@ -66,8 +77,8 @@ enum OrderOrigin {
   final String label;
 
   /// Interpreta el campo `origen` de Firestore.
-  static OrderOrigin fromKey(Object? key) =>
-      key == 'ia' ? OrderOrigin.ia : OrderOrigin.catalogo;
+  static OrderOrigin fromKey(Object? key) => OrderOrigin.values
+      .firstWhere((o) => o.key == key, orElse: () => OrderOrigin.catalogo);
 }
 
 /// Producto dentro de un pedido. Guarda una copia del nombre y del precio

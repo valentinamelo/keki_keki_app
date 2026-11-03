@@ -15,7 +15,8 @@ class NavEntry {
   final int badge;
 }
 
-/// Barra inferior con cuatro pestañas y el botón central del asistente.
+/// Barra inferior con cuatro pestañas y un botón central: el asistente de IA
+/// en la app del cliente y «Nuevo pedido» en la del administrador.
 class KekiBottomNav extends StatelessWidget {
   /// Crea la barra; [items] debe tener cuatro pestañas (dos a cada lado).
   const KekiBottomNav({
@@ -24,12 +25,16 @@ class KekiBottomNav extends StatelessWidget {
     required this.current,
     required this.onSelect,
     required this.onFab,
+    this.fabIcon = Icons.auto_awesome,
+    this.fabTooltip = 'Asistente Keki IA',
   }) : assert(items.length == 4);
 
   final List<NavEntry> items;
   final int current;
   final ValueChanged<int> onSelect;
   final VoidCallback onFab;
+  final IconData fabIcon;
+  final String fabTooltip;
 
   /// Construye la pestaña [i] de [items].
   Widget _item(int i) => _NavItem(
@@ -60,7 +65,11 @@ class KekiBottomNav extends StatelessWidget {
                   child: Center(
                     child: Transform.translate(
                       offset: const Offset(0, -10),
-                      child: _AiFab(onTap: onFab),
+                      child: _CenterFab(
+                        icon: fabIcon,
+                        tooltip: fabTooltip,
+                        onTap: onFab,
+                      ),
                     ),
                   ),
                 ),
@@ -140,10 +149,16 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-class _AiFab extends StatelessWidget {
-  /// Crea el botón decorativo que representa el asistente de IA.
-  const _AiFab({required this.onTap});
+class _CenterFab extends StatelessWidget {
+  /// Crea el botón central con degradado, su [icon] y su [tooltip].
+  const _CenterFab({
+    required this.icon,
+    required this.tooltip,
+    required this.onTap,
+  });
 
+  final IconData icon;
+  final String tooltip;
   final VoidCallback onTap;
 
   /// Dibuja el botón y ejecuta la acción asociada cuando se toca.
@@ -151,7 +166,7 @@ class _AiFab extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(15);
     return Tooltip(
-      message: 'Asistente Keki IA',
+      message: tooltip,
       child: Container(
         width: 46,
         height: 46,
@@ -176,8 +191,7 @@ class _AiFab extends StatelessWidget {
           child: InkWell(
             borderRadius: radius,
             onTap: onTap,
-            child:
-                const Icon(Icons.auto_awesome, size: 20, color: Colors.white),
+            child: Icon(icon, size: 20, color: Colors.white),
           ),
         ),
       ),

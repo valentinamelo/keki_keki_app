@@ -108,7 +108,11 @@ class Product {
     this.options = const [],
     this.active = true,
     this.stock = 0,
+    this.sortOrder = 0,
   });
+
+  /// Con este stock o menos el administrador ve el aviso de «stock bajo».
+  static const int lowStockThreshold = 5;
 
   final String id;
   final String name;
@@ -130,12 +134,19 @@ class Product {
   /// Si es `false`, el producto no se muestra a los clientes.
   final bool active;
 
-  /// Unidades disponibles (la gestión de stock llega en la entrega 3).
+  /// Unidades disponibles. Se descuentan cuando un pedido pasa a
+  /// «En preparación» y se devuelven si ese pedido se cancela.
   final int stock;
 
+  /// Posición en el catálogo (campo `orden`); define el orden por relevancia.
+  final int sortOrder;
+
+  /// `true` si quedan [lowStockThreshold] unidades o menos.
+  bool get lowStock => stock <= lowStockThreshold;
+
   /// Convierte el producto al documento de la colección `productos`.
-  /// [order] conserva la posición del catálogo para el orden por relevancia.
-  Map<String, dynamic> toMap({int order = 0}) => {
+  /// [order] reemplaza la posición guardada en [sortOrder] si se indica.
+  Map<String, dynamic> toMap({int? order}) => {
         'nombre': name,
         'nombreDetalle': detailName,
         'categoria': category.name,
@@ -149,7 +160,7 @@ class Product {
         'opciones': [for (final g in options) g.toMap()],
         'activo': active,
         'stock': stock,
-        'orden': order,
+        'orden': order ?? sortOrder,
       };
 
   /// Reconstruye un producto a partir del documento [id] de Firestore.
@@ -171,6 +182,7 @@ class Product {
         ],
         active: map['activo'] as bool? ?? true,
         stock: (map['stock'] as num?)?.toInt() ?? 0,
+        sortOrder: (map['orden'] as num?)?.toInt() ?? 0,
       );
 
   /// Nombre que se muestra en el detalle, o [name] si no hay otro definido.

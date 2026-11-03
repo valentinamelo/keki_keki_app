@@ -13,6 +13,25 @@ import '../widgets/order_widgets.dart';
 import '../widgets/product_art.dart';
 import '../widgets/product_widgets.dart';
 
+/// Abre la hoja para elegir forma, fecha y hora de entrega de [cart]. [hint]
+/// explica qué dato falta cuando se intentó confirmar sin completarlos; con
+/// [allowToday] se puede elegir el mismo día (pedidos manuales del admin).
+Future<void> showDeliverySheet(
+  BuildContext context,
+  CartController cart, {
+  String? hint,
+  bool allowToday = false,
+}) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    backgroundColor: Colors.white,
+    builder: (_) =>
+        _DeliverySheet(cart: cart, hint: hint, allowToday: allowToday),
+  );
+}
+
 /// Pestaña Carrito: cantidades, datos de entrega, resumen y confirmación.
 /// Al confirmar se crea un documento en la colección `pedidos`.
 class CartScreen extends StatelessWidget {
@@ -27,22 +46,6 @@ class CartScreen extends StatelessWidget {
   final VoidCallback onExplore;
   final VoidCallback onOrderPlaced;
 
-  /// Abre la hoja para elegir forma, fecha y hora de entrega. [hint]
-  /// explica qué dato falta cuando se intentó confirmar sin completarlos.
-  static Future<void> _editDelivery(
-    BuildContext context,
-    CartController cart, {
-    String? hint,
-  }) {
-    return showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      showDragHandle: true,
-      backgroundColor: Colors.white,
-      builder: (_) => _DeliverySheet(cart: cart, hint: hint),
-    );
-  }
-
   /// Valida los datos, guarda el pedido y muestra la confirmación.
   Future<void> _confirm(BuildContext context) async {
     final scope = AppScope.of(context);
@@ -50,7 +53,7 @@ class CartScreen extends StatelessWidget {
     if (cart.submitting) return;
     final missing = cart.missingInfo;
     if (missing != null) {
-      await _editDelivery(context, cart, hint: missing);
+      await showDeliverySheet(context, cart, hint: missing);
       return;
     }
     try {
@@ -138,18 +141,18 @@ class CartScreen extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(22, 8, 22, 12),
                   children: [
                     for (final line in cart.lines) ...[
-                      _CartItem(line: line, cart: cart),
+                      CartItemTile(line: line, cart: cart),
                       const SizedBox(height: 12),
                     ],
                     const SizedBox(height: 2),
-                    _DeliveryCard(
+                    DeliveryCard(
                       cart: cart,
-                      onTap: () => _editDelivery(context, cart),
+                      onTap: () => showDeliverySheet(context, cart),
                     ),
                   ],
                 ),
               ),
-              _Summary(cart: cart, onConfirm: () => _confirm(context)),
+              CartSummary(cart: cart, onConfirm: () => _confirm(context)),
             ],
           ),
         );
@@ -158,9 +161,10 @@ class CartScreen extends StatelessWidget {
   }
 }
 
-class _CartItem extends StatelessWidget {
-  /// Crea la fila de [line] con su selector de cantidad.
-  const _CartItem({required this.line, required this.cart});
+class CartItemTile extends StatelessWidget {
+  /// Crea la fila de [line] con su selector de cantidad (también la usa el
+  /// pedido manual del administrador).
+  const CartItemTile({super.key, required this.line, required this.cart});
 
   final CartLine line;
   final CartController cart;
@@ -283,9 +287,9 @@ class _QtyButton extends StatelessWidget {
   }
 }
 
-class _DeliveryCard extends StatelessWidget {
+class DeliveryCard extends StatelessWidget {
   /// Crea la tarjeta azul con la entrega elegida.
-  const _DeliveryCard({required this.cart, required this.onTap});
+  const DeliveryCard({super.key, required this.cart, required this.onTap});
 
   final CartController cart;
   final VoidCallback onTap;
@@ -363,12 +367,18 @@ class _DeliveryCard extends StatelessWidget {
   }
 }
 
-class _Summary extends StatelessWidget {
-  /// Crea el resumen fijo con subtotal, domicilio, total y botón.
-  const _Summary({required this.cart, required this.onConfirm});
+class CartSummary extends StatelessWidget {
+  /// Crea el resumen fijo con subtotal, domicilio, total y botón [label].
+  const CartSummary({
+    super.key,
+    required this.cart,
+    required this.onConfirm,
+    this.label = 'Confirmar pedido',
+  });
 
   final CartController cart;
   final VoidCallback onConfirm;
+  final String label;
 
   /// Construye una fila de etiqueta y valor del resumen.
   Widget _row(String label, String value, {bool total = false}) {
@@ -410,7 +420,7 @@ class _Summary extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: GradientButton(
-              label: cart.submitting ? 'Enviando pedido…' : 'Confirmar pedido',
+              label: cart.submitting ? 'Enviando pedido…' : label,
               onPressed: onConfirm,
             ),
           ),
@@ -423,10 +433,15 @@ class _Summary extends StatelessWidget {
 /// Hoja para elegir forma de entrega, día, franja, dirección e indicaciones.
 class _DeliverySheet extends StatefulWidget {
   /// Crea la hoja con los valores actuales de [cart] y un aviso opcional.
-  const _DeliverySheet({required this.cart, this.hint});
+  const _DeliverySheet({
+    required this.cart,
+    this.hint,
+    this.allowToday = false,
+  });
 
   final CartController cart;
   final String? hint;
+  final bool allowToday;
 
   /// Crea el estado con una copia editable de los datos de entrega.
   @override
@@ -434,8 +449,8 @@ class _DeliverySheet extends StatefulWidget {
 }
 
 class _DeliverySheetState extends State<_DeliverySheet> {
-  /// Días que se pueden elegir, empezando mañana (las tortas se hornean
-  /// el día de la entrega y necesitan un día de anticipación).
+  /// Días que se pueden elegir. El cliente empieza mañana (las tortas se
+  /// hornean el día de la entrega y necesitan un día de anticipación).
   static const int _daysAhead = 14;
 
   late DeliveryMode _mode = widget.cart.mode;
@@ -499,7 +514,7 @@ class _DeliverySheetState extends State<_DeliverySheet> {
   Widget build(BuildContext context) {
     final today = DateTime.now();
     final days = [
-      for (var i = 1; i <= _daysAhead; i++)
+      for (var i = widget.allowToday ? 0 : 1; i <= _daysAhead; i++)
         DateTime(today.year, today.month, today.day + i),
     ];
 
@@ -557,7 +572,9 @@ class _DeliverySheetState extends State<_DeliverySheet> {
                         itemBuilder: (context, i) {
                           final d = days[i];
                           return _Choice(
-                            label: i == 0 ? 'Mañana · ${d.day}' : shortDate(d),
+                            label: relativeDay(d) == shortDate(d)
+                                ? shortDate(d)
+                                : '${relativeDay(d)} · ${d.day}',
                             selected:
                                 _date != null && DateUtils.isSameDay(_date, d),
                             onTap: () => setState(() => _date = d),

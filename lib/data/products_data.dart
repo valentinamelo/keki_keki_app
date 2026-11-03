@@ -3,9 +3,9 @@
 import '../models/product.dart';
 
 // ---------------------------------------------------------------------------
-// Datos de ejemplo (en memoria). Nombres, precios base y calificaciones salen
-// de los mockups; los recargos de cada opción son valores de muestra y se
-// pueden editar aquí sin tocar la interfaz.
+// Datos de ejemplo para la carga inicial del catálogo. Nombres, precios base,
+// calificaciones y parte del stock salen de los mockups; los recargos de cada
+// opción y el resto del stock son valores de muestra.
 // ---------------------------------------------------------------------------
 
 /// Tamaños de torta. [basePersons] es el tamaño al que corresponde el precio
@@ -66,6 +66,7 @@ final List<Product> kProducts = [
     rating: 4.9,
     art: ArtKind.strawberryCake,
     options: [_tamanos(15), _sabores(), _rellenos()],
+    stock: 12,
   ),
   Product(
     id: 'brownie-doble-cacao',
@@ -82,6 +83,7 @@ final List<Product> kProducts = [
         OptionChoice('Caja x8', extra: 16000),
       ]),
     ],
+    stock: 26,
   ),
   Product(
     id: 'cupcakes-duo-pastel',
@@ -97,6 +99,7 @@ final List<Product> kProducts = [
         OptionChoice('Caja x12', extra: 20000),
       ]),
     ],
+    stock: 40,
   ),
   Product(
     id: 'galletas-mantequilla',
@@ -113,6 +116,7 @@ final List<Product> kProducts = [
         OptionChoice('Caja x12', extra: 13000),
       ]),
     ],
+    stock: 30,
   ),
   Product(
     id: 'torta-rosa-frutos',
@@ -129,6 +133,7 @@ final List<Product> kProducts = [
     noPreservatives: true,
     art: ArtKind.roseCake,
     options: [_tamanos(15), _sabores(), _rellenos()],
+    stock: 18,
   ),
   Product(
     id: 'torta-azul-vainilla',
@@ -140,6 +145,7 @@ final List<Product> kProducts = [
     rating: 4.6,
     art: ArtKind.blueCake,
     options: [_tamanos(15), _sabores(), _rellenos()],
+    stock: 3,
   ),
   Product(
     id: 'torta-chocolate',
@@ -150,5 +156,6 @@ final List<Product> kProducts = [
     basePrice: 78000,
     art: ArtKind.chocolateCake,
     options: [_tamanos(20), _sabores(defaultIndex: 1), _rellenos()],
+    stock: 8,
   ),
 ];

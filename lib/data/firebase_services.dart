@@ -4,6 +4,7 @@ import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart' hide Order;
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../models/app_user.dart';
 import '../models/order.dart';
@@ -15,6 +16,7 @@ AppServices firebaseServices() {
   final db = FirebaseFirestore.instance;
   return AppServices(
     auth: FirebaseAuthService(FirebaseAuth.instance, db),
+    users: FirestoreUserRepository(db),
     products: FirestoreProductRepository(db),
     orders: FirestoreOrderRepository(db),
   );
@@ -166,6 +168,25 @@ class FirebaseAuthService implements AuthService {
   }
 }
 
+/// Favoritos guardados como lista en `usuarios/{uid}.favoritos`.
+class FirestoreUserRepository implements UserRepository {
+  /// Crea el repositorio sobre la base de datos [_db].
+  FirestoreUserRepository(this._db);
+
+  final FirebaseFirestore _db;
+
+  /// `arrayUnion` y `arrayRemove` cambian un solo elemento sin reescribir la
+  /// lista, así dos dispositivos pueden marcar favoritos a la vez.
+  @override
+  Future<void> setFavorite(String uid, String productId, bool favorite) {
+    return _db.collection('usuarios').doc(uid).update({
+      'favoritos': favorite
+          ? FieldValue.arrayUnion([productId])
+          : FieldValue.arrayRemove([productId]),
+    });
+  }
+}
+
 /// Catálogo guardado en la colección `productos`.
 class FirestoreProductRepository implements ProductRepository {
   /// Crea el repositorio sobre la base de datos [_db].
@@ -199,6 +220,26 @@ class FirestoreProductRepository implements ProductRepository {
     }
     await batch.commit();
   }
+
+  /// Un producto nuevo recibe un id automático y queda al final del orden.
+  @override
+  Future<String> save(Product product) async {
+    if (product.id.isNotEmpty) {
+      await _col.doc(product.id).set(product.toMap());
+      return product.id;
+    }
+    final ref = _col.doc();
+    await ref.set(
+        product.toMap(order: DateTime.now().millisecondsSinceEpoch ~/ 1000));
+    return ref.id;
+  }
+
+  @override
+  Future<void> setActive(String id, bool active) =>
+      _col.doc(id).update({'activo': active});
+
+  @override
+  Future<void> delete(String id) => _col.doc(id).delete();
 }
 
 /// Pedidos guardados en la colección `pedidos`.
@@ -215,18 +256,37 @@ class FirestoreOrderRepository implements OrderRepository {
       Order.fromMap(doc.id, _dataOf(doc));
 
   /// Agrega la fecha del servidor como creación y primer paso del historial.
+  ///
+  /// `set()` solo termina cuando el servidor confirma. Sin conexión, Firestore
+  /// guarda el pedido en el celular y lo envía al volver la red, pero el
+  /// `Future` no termina: por eso se espera como máximo [_ackTimeout] y luego
+  /// se devuelve el id igual (el pedido ya aparece en «Mis pedidos» como
+  /// «Enviando…»). Un rechazo de las reglas sí llega antes y se muestra.
   @override
   Future<String> create(Order order) async {
     final ref = _col.doc();
-    await ref.set({
+    final write = ref.set({
       ...order.toMap(),
       'estado': OrderStatus.pendiente.key,
       'creado': FieldValue.serverTimestamp(),
       'actualizado': FieldValue.serverTimestamp(),
       'historial': {OrderStatus.pendiente.key: FieldValue.serverTimestamp()},
     });
+    try {
+      await write.timeout(_ackTimeout);
+    } on TimeoutException {
+      // Sigue en la cola de Firestore; si luego falla, queda en la consola.
+      unawaited(write.catchError((Object e) {
+        debugPrint('Keki: el pedido ${ref.id} no se pudo enviar: $e');
+      }));
+      debugPrint('Keki: pedido ${ref.id} guardado sin confirmar del servidor '
+          '(¿sin conexión con Firestore?).');
+    }
     return ref.id;
   }
+
+  /// Tiempo máximo que se espera la confirmación del servidor.
+  static const Duration _ackTimeout = Duration(seconds: 8);
 
   @override
   Stream<List<Order>> watchAll() => _col
@@ -247,13 +307,39 @@ class FirestoreOrderRepository implements OrderRepository {
   Stream<Order?> watchOrder(String id) =>
       _col.doc(id).snapshots().map((doc) => doc.exists ? _fromDoc(doc) : null);
 
-  /// Actualiza solo los campos que las reglas permiten modificar.
+  /// En una transacción cambia el estado (solo los campos que las reglas
+  /// permiten) y, si corresponde, descuenta o devuelve el stock. Si algo
+  /// falla no se guarda ninguno de los dos cambios.
   @override
   Future<void> updateStatus(String id, OrderStatus status) {
-    return _col.doc(id).update({
-      'estado': status.key,
-      'actualizado': FieldValue.serverTimestamp(),
-      'historial.${status.key}': FieldValue.serverTimestamp(),
+    final ref = _col.doc(id);
+    return _db.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      if (!snap.exists) return;
+      final order = _fromDoc(snap);
+      final sign = order.status.stockSignTo(status);
+
+      // Firestore exige hacer todas las lecturas antes de las escrituras.
+      final newStock = <DocumentReference<Map<String, dynamic>>, int>{};
+      if (sign != 0) {
+        for (final entry in unitsByProduct(order).entries) {
+          final productRef = _db.collection('productos').doc(entry.key);
+          final product = await tx.get(productRef);
+          if (!product.exists) continue; // producto eliminado del catálogo
+          final stock = (product.data()?['stock'] as num?)?.toInt() ?? 0;
+          final next = stock + sign * entry.value;
+          newStock[productRef] = next < 0 ? 0 : next;
+        }
+      }
+
+      tx.update(ref, {
+        'estado': status.key,
+        'actualizado': FieldValue.serverTimestamp(),
+        'historial.${status.key}': FieldValue.serverTimestamp(),
+      });
+      newStock.forEach((productRef, stock) {
+        tx.update(productRef, {'stock': stock});
+      });
     });
   }
 }

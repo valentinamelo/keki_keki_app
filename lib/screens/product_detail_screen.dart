@@ -13,10 +13,13 @@ import '../widgets/product_widgets.dart';
 
 /// Módulo Producto (mockup 03 — Detalle / Personalización).
 class ProductDetailScreen extends StatefulWidget {
-  /// Crea el detalle para el [product] recibido desde el catálogo.
-  const ProductDetailScreen({super.key, required this.product});
+  /// Crea el detalle para el [product] recibido desde el catálogo. Con
+  /// [onAdd] la selección se entrega a quien abrió la pantalla (el pedido
+  /// manual del admin) en lugar de ir al carrito, y la pantalla se cierra.
+  const ProductDetailScreen({super.key, required this.product, this.onAdd});
 
   final Product product;
+  final void Function(Map<String, int> selection, int quantity)? onAdd;
 
   /// Crea el estado que guarda las opciones elegidas y la cantidad.
   @override
@@ -33,6 +36,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   /// Agrega la configuración actual al carrito y confirma la acción.
   void _addToCart() {
+    final onAdd = widget.onAdd;
+    if (onAdd != null) {
+      onAdd(Map<String, int>.of(_selection), _qty);
+      Navigator.of(context).pop();
+      return;
+    }
     AppScope.of(context).cart.add(widget.product, _selection, quantity: _qty);
     showKekiSnack(context, '${widget.product.name} agregado al carrito');
   }
@@ -50,7 +59,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         qty: _qty,
         onMinus: _qty > 1 ? () => setState(() => _qty--) : null,
         onPlus: _qty < _maxQty ? () => setState(() => _qty++) : null,
-        label: 'Agregar al carrito · ${cop(unitPrice * _qty)}',
+        label:
+            '${widget.onAdd == null ? 'Agregar al carrito' : 'Agregar al pedido'}'
+            ' · ${cop(unitPrice * _qty)}',
         onAdd: _addToCart,
       ),
       body: LayoutBuilder(

@@ -19,6 +19,7 @@ class AppUser {
     required this.email,
     this.phone = '',
     this.role = UserRole.cliente,
+    this.favorites = const {},
   });
 
   final String uid;
@@ -26,6 +27,9 @@ class AppUser {
   final String email;
   final String phone;
   final UserRole role;
+
+  /// Ids de los productos favoritos (campo `favoritos`).
+  final Set<String> favorites;
 
   /// Indica si el usuario debe ver la interfaz de administración.
   bool get isAdmin => role == UserRole.admin;
@@ -52,5 +56,18 @@ class AppUser {
         email: map['email'] as String? ?? '',
         phone: map['telefono'] as String? ?? '',
         role: UserRole.fromName(map['rol']),
+        favorites: {
+          for (final id in (map['favoritos'] as List? ?? const [])) '$id',
+        },
+      );
+
+  /// Copia del perfil con otros [favorites].
+  AppUser copyWith({Set<String>? favorites}) => AppUser(
+        uid: uid,
+        name: name,
+        email: email,
+        phone: phone,
+        role: role,
+        favorites: favorites ?? this.favorites,
       );
 }

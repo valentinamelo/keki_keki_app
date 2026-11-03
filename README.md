@@ -10,7 +10,7 @@ lee el rol del usuario en Firestore y lo envía a la interfaz que le corresponde
 |---|---|---|
 | 1 | Catálogo del cliente: Explorar y Producto (mockups 02 y 03) | ✅ |
 | 2 | Firebase, registro/inicio de sesión con roles, productos en Firestore, carrito y confirmación del pedido (mockup 05), gestión de pedidos del admin en tiempo real y reglas de seguridad | ✅ |
-| 3 | Administración de productos, panel general e inicio del cliente | Pendiente |
+| 3 | Administración de productos (crear, editar, activar, stock bajo), panel general con cifras reales, pedido manual del admin, inicio del cliente y favoritos guardados en la cuenta | ✅ |
 | 4 | Asistente IA, pulido y sustentación | Pendiente |
 
 ## Cómo ejecutarla
@@ -55,6 +55,10 @@ Cuentas de prueba (contraseña `123456`): `cliente@keki.co` y `admin@keki.co`.
    **Cargar catálogo de ejemplo**: se suben los 7 productos a la colección `productos`.
    Desde ese momento los clientes los ven en Explorar.
 
+> **Al pasar a la entrega 3:** vuelve a publicar [`firestore.rules`](firestore.rules)
+> (cambiaron) y, como admin, usa **Productos › ⋮ › Restablecer catálogo de ejemplo**
+> para que los productos cargados antes reciban sus valores de stock.
+
 > Si iOS se queja de la versión mínima al compilar, abre `ios/Podfile` y deja
 > `platform :ios, '15.0'`.
 
@@ -68,6 +72,8 @@ Las pruebas usan los servicios en memoria, así que no necesitan Firebase.
 
 ## Demostración sugerida (tiempo real)
 
+**Pedidos en vivo (entrega 2)**
+
 1. Abre la app en dos dispositivos o emuladores (o uno y la web): uno con una cuenta
    de cliente y otro con la cuenta admin en la pestaña **Pedidos**.
 2. El cliente agrega productos, abre **Carrito**, elige entrega y pulsa **Confirmar pedido**.
@@ -76,6 +82,55 @@ Las pruebas usan los servicios en memoria, así que no necesitan Firebase.
 4. El admin abre el pedido y pulsa **Marcar como En preparación**, luego **Listo** y
    **Entregado**. En el celular del cliente (**Perfil › Mis pedidos**) el estado cambia
    solo, en el mismo momento.
+
+**Catálogo y panel (entrega 3)**
+
+5. El admin crea un producto en **Productos › Nuevo**: aparece al instante en Explorar
+   del cliente. Si lo desactiva con el interruptor, desaparece del cliente.
+6. Al marcar un pedido **En preparación**, el stock de sus productos baja; si un
+   producto queda en 5 unidades o menos, sale el aviso de **Stock bajo**.
+7. El **Panel general** (Inicio del admin) se actualiza solo con cada pedido:
+   ventas de hoy, pendientes, entregados de la semana, gráfico y más vendidos.
+8. El cliente marca favoritos, cierra sesión y vuelve a entrar: siguen ahí, y
+   aparecen en **Inicio › Tus favoritos**.
+
+## Qué incluye la entrega 3
+
+**Inicio del cliente (mockup 01)** — `home_screen.dart`
+- Saludo según la hora, buscador y categorías (llevan a Explorar ya filtrado),
+  «Destacados de la semana» (los mejor calificados), «Tus favoritos» y la tarjeta
+  del asistente (la IA llega en la entrega 4). La app del cliente abre aquí.
+
+**Favoritos en la cuenta** — `catalog_controller.dart`, `auth_gate.dart`
+- Se guardan en `usuarios/{uid}.favoritos` con `arrayUnion` / `arrayRemove`.
+  El corazón cambia al instante y, si no se puede guardar, vuelve atrás.
+  Si se marcan desde otro dispositivo, se sincronizan solos.
+
+**Catálogo de productos del admin (mockup admin 03)** — `admin_products_screen.dart`, `product_form_screen.dart`
+- Cuadrícula con todos los productos (también los ocultos), filtro por categoría,
+  interruptor para activar/desactivar, precio, stock (verde, ámbar si es bajo, rojo
+  si está agotado), editar y eliminar con confirmación.
+- Aviso de **stock bajo** (5 unidades o menos) que permite filtrar esos productos.
+- Formulario para crear/editar: ilustración, nombre, categoría, descripción, frase
+  destacada, precio base, stock, visibilidad, sin conservantes y **grupos de opciones**
+  (por ejemplo Tamaño o Sabor) con el recargo de cada alternativa y cuál viene elegida.
+- El stock se descuenta cuando un pedido pasa a **En preparación** y se devuelve si
+  ese pedido se cancela. Se hace en una **transacción** de Firestore junto con el
+  cambio de estado: o se guardan los dos, o ninguno.
+
+**Panel general (mockup admin 01)** — `admin_dashboard_screen.dart`, `dashboard_stats.dart`
+- Ventas de hoy (con variación frente a ayer), pedidos pendientes (al tocarla abre
+  Pedidos filtrado), entregados esta semana (frente a la semana pasada) y pedidos vía
+  asistente (en cero hasta la entrega 4).
+- Gráfico de ventas de lunes a domingo: el día con más ventas muestra su valor y al
+  tocar cualquier barra se ve el suyo. Más vendidos de la semana con unidades y dinero.
+- Todo se calcula con los pedidos reales que ya escucha la gestión de pedidos, así que
+  se actualiza en vivo. Los pedidos cancelados no cuentan como ventas.
+
+**Pedido manual del admin** — `new_order_screen.dart`
+- El botón central de la barra del admin abre **Nuevo pedido**: nombre y celular del
+  cliente, productos (con su personalización), entrega (puede ser el mismo día) y total.
+  El pedido queda con origen «Pedido manual» y sigue el mismo flujo de estados.
 
 ## Qué incluye la entrega 2
 
@@ -119,9 +174,9 @@ Las pruebas usan los servicios en memoria, así que no necesitan Firebase.
 
 ```
 usuarios/{uid}
-  nombre, email, telefono, rol ("cliente" | "admin"), creado
+  nombre, email, telefono, rol ("cliente" | "admin"), favoritos: [idProducto], creado
 
-productos/{id}            (id legible, p. ej. "torta-chocolate")
+productos/{id}            (id legible en los de ejemplo, automático en los nuevos)
   nombre, nombreDetalle, categoria, descripcion, destacado, precioBase,
   calificacion, resenas, sinConservantes, ilustracion, activo, stock, orden,
   opciones: [{ id, titulo, predeterminada, opciones: [{ nombre, extra }] }]
@@ -131,7 +186,7 @@ pedidos/{id}
   items: [{ productoId, nombre, ilustracion, opciones, precioUnitario, cantidad }],
   subtotal, domicilio, total,
   tipoEntrega ("domicilio" | "recoger"), entrega (fecha y hora), franja,
-  direccion, notas, origen ("catalogo" | "ia"),
+  direccion, notas, origen ("catalogo" | "ia" | "manual"),
   estado ("pendiente" | "en_preparacion" | "listo" | "entregado" | "cancelado"),
   historial: { <estado>: fecha }, creado, actualizado
 ```
@@ -144,6 +199,8 @@ Decisiones:
 - Las consultas no combinan filtros con orden (el orden se hace en el dispositivo),
   por eso **no hace falta crear índices compuestos**.
 - `origen` ya existe para que la entrega 4 marque los pedidos hechos desde el asistente.
+  Los pedidos manuales tienen `clienteId` del admin (lo exigen las reglas) y el nombre
+  y teléfono del cliente real en `clienteNombre` y `clienteTelefono`.
 
 ## Estructura y explicación de los archivos
 
@@ -156,38 +213,44 @@ lib/
     snack.dart
     theme.dart
   models/
-    app_user.dart                (nuevo)
-    order.dart                   (nuevo)
+    app_user.dart
+    order.dart
     product.dart
   data/
-    services.dart                (nuevo)
-    firebase_services.dart       (nuevo)
-    memory_services.dart         (nuevo)
+    services.dart
+    firebase_services.dart
+    memory_services.dart
     products_data.dart
   state/
     app_scope.dart
     catalog_controller.dart
     cart_controller.dart
-    admin_orders_controller.dart (nuevo)
+    admin_orders_controller.dart
+    dashboard_stats.dart         (nuevo, entrega 3)
   widgets/
-    keki_nav.dart                (nuevo)
-    order_widgets.dart           (nuevo)
+    keki_nav.dart
+    order_widgets.dart
     product_art.dart
     product_card.dart
     product_widgets.dart
   screens/
-    auth_gate.dart               (nuevo)
-    login_screen.dart            (nuevo)
+    auth_gate.dart
+    login_screen.dart
     home_shell.dart
+    home_screen.dart             (nuevo, entrega 3)
     explore_screen.dart
     product_detail_screen.dart
-    cart_screen.dart             (nuevo)
-    profile_screen.dart          (nuevo)
-    order_detail_screen.dart     (nuevo)
+    cart_screen.dart
+    profile_screen.dart
+    order_detail_screen.dart
     admin/
-      admin_shell.dart           (nuevo)
-      admin_orders_screen.dart   (nuevo)
-firestore.rules                  (nuevo)
+      admin_shell.dart
+      admin_orders_screen.dart
+      admin_dashboard_screen.dart (nuevo, entrega 3)
+      admin_products_screen.dart  (nuevo, entrega 3)
+      product_form_screen.dart    (nuevo, entrega 3)
+      new_order_screen.dart       (nuevo, entrega 3)
+firestore.rules
 test/
   widget_test.dart
 ```
@@ -198,8 +261,8 @@ test/
   `DefaultFirebaseOptions.currentPlatform` y monta `KekiApp` con los servicios de
   Firebase. Con `--dart-define=KEKI_DEMO=true` usa los servicios en memoria.
   `KekiApp` recibe los servicios y delega en `AuthGate`.
-- **`lib/firebase_options.dart`**: claves del proyecto de Firebase por plataforma.
-  El archivo del repositorio es provisional y `flutterfire configure` lo reemplaza.
+- **`lib/firebase_options.dart`**: claves del proyecto `keki-keki` para Android e iOS.
+  Para agregar otra plataforma (web, macOS) hay que volver a ejecutar `flutterfire configure`.
 - **`firestore.rules`**: reglas de seguridad de Firestore (ver arriba).
 - **`pubspec.yaml`**: dependencias. Además del SDK de Flutter usa `firebase_core`,
   `firebase_auth` y `cloud_firestore`.
@@ -208,23 +271,26 @@ test/
 
 - **`lib/models/product.dart`**: categorías, ilustraciones, opciones y producto.
   `priceFor` y `summaryFor` calculan precio y resumen de la personalización.
-  Nuevo: `toMap` / `fromMap` convierten cada clase al formato de Firestore, y los
-  campos `active` y `stock`.
+  `toMap` / `fromMap` convierten cada clase al formato de Firestore. Tiene `active`,
+  `stock`, `sortOrder` (campo `orden`) y `lowStock` (5 unidades o menos).
 - **`lib/models/app_user.dart`**: `UserRole` (cliente/admin) y `AppUser`, el perfil
-  guardado en `usuarios`. `isAdmin` decide la interfaz.
+  guardado en `usuarios`. `isAdmin` decide la interfaz y `favorites` guarda los favoritos.
 - **`lib/models/order.dart`**: `OrderStatus` (con `next` para el siguiente paso del
-  flujo, `isOpen` y `canCancel`), `DeliveryMode`, `OrderOrigin`, `OrderItem` y `Order`.
+  flujo, `isOpen`, `canCancel` y `stockSignTo`, que dice si un cambio de estado descuenta
+  o devuelve stock), `DeliveryMode`, `OrderOrigin` (catálogo, IA o manual), `OrderItem` y `Order`.
   `Order` calcula subtotal, total y un resumen de productos, y se convierte a/desde
   el documento de `pedidos`.
-- **`lib/data/services.dart`**: contratos `AuthService`, `ProductRepository` y
-  `OrderRepository`, y `AppServices`, que los agrupa. Las pantallas solo conocen estas
+- **`lib/data/services.dart`**: contratos `AuthService`, `UserRepository` (favoritos),
+  `ProductRepository` (leer, cargar, guardar, activar y borrar) y `OrderRepository`,
+  y `AppServices`, que los agrupa. Las pantallas solo conocen estas
   interfaces, no Firebase: por eso se pueden probar sin conexión.
 - **`lib/data/firebase_services.dart`**: implementaciones reales.
   `FirebaseAuthService` combina la sesión de Auth con el documento del usuario
   (al cambiar de sesión, deja de escuchar el perfil anterior); también traduce los
   errores. `FirestoreProductRepository` escucha `productos` y sube el catálogo inicial
   en un lote. `FirestoreOrderRepository` crea pedidos con hora del servidor, los
-  escucha con `snapshots()` y cambia su estado. `_plain` convierte los `Timestamp`
+  escucha con `snapshots()` y cambia su estado en una transacción que también ajusta
+  el stock. `FirestoreUserRepository` guarda los favoritos. `_plain` convierte los `Timestamp`
   en `DateTime` para que los modelos no dependan de Firebase.
 - **`lib/data/memory_services.dart`**: las mismas operaciones en memoria, con las
   cuentas demo. Se usan en las pruebas y en el modo demo.
@@ -236,16 +302,21 @@ test/
 - **`lib/state/app_scope.dart`**: `AppScope` comparte con todas las pantallas el
   usuario de la sesión, los servicios y los controladores del catálogo y el carrito.
 - **`lib/state/catalog_controller.dart`**: búsqueda, categoría, orden y favoritos
-  sobre los productos que llegan del stream de Firestore. Expone `loading`, `error`
-  y `totalCount`, y cancela la suscripción en `dispose`.
+  sobre los productos que llegan del stream de Firestore. Expone `loading`, `error`,
+  `totalCount`, `featured` (destacados) y `favoriteProducts`. `toggleFavorite` cambia
+  el favorito al instante y lo guarda con `saveFavorite`; `syncFavorites` aplica los
+  que llegan de la cuenta.
 - **`lib/state/cart_controller.dart`**: líneas del carrito y datos de entrega.
   `setQuantity` cambia o quita una línea; `setDelivery` guarda forma, día, franja,
   dirección e indicaciones; `missingInfo` dice qué falta para confirmar;
-  `buildOrder` arma el `Order` y `placeOrder` lo guarda y vacía el carrito.
+  `buildOrder` arma el `Order` (con su `origin`) y `placeOrder` lo guarda y vacía el carrito.
   `kDeliveryFee` y `kDeliverySlots` definen el domicilio y las franjas.
 - **`lib/state/admin_orders_controller.dart`**: escucha todos los pedidos, filtra por
   estado, cuenta pedidos por estado y llama a `onNewOrder` con cada pedido que llega
-  después de la primera carga (el aviso en vivo).
+  después de la primera carga (el aviso en vivo). También alimenta el Panel general.
+- **`lib/state/dashboard_stats.dart`**: `DashboardStats.from(pedidos)` calcula, sin
+  tocar la interfaz, las ventas de hoy y ayer, pendientes, entregados de esta semana y
+  la anterior, pedidos vía IA, ventas por día y los más vendidos (`TopProduct`).
 
 ### Pantallas
 
@@ -256,35 +327,44 @@ test/
 - **`lib/screens/login_screen.dart`**: selector «Iniciar sesión / Crear cuenta»,
   validación de campos, mensajes de error y, en modo demo, las cuentas de prueba.
 - **`lib/screens/home_shell.dart`**: pestañas del cliente (Inicio, Explorar, Carrito,
-  Perfil) con la barra inferior compartida.
+  Perfil) con la barra inferior compartida. Abre en Inicio.
+- **`lib/screens/home_screen.dart`**: Inicio del cliente (mockup 01).
 - **`lib/screens/explore_screen.dart`** y **`product_detail_screen.dart`**: igual que
-  en la entrega 1, ahora con datos de Firestore y estados de carga y error.
+  en la entrega 1, ahora con datos de Firestore y estados de carga y error. El detalle
+  acepta `onAdd` para que el pedido manual del admin reciba la selección.
 - **`lib/screens/cart_screen.dart`**: carrito y confirmación (mockup 05).
-  `_DeliverySheet` es la hoja para elegir la entrega; si falta algo al confirmar se
-  abre sola y explica qué falta.
+  `showDeliverySheet` abre la hoja para elegir la entrega (si falta algo al confirmar
+  se abre sola y explica qué falta). `CartItemTile`, `DeliveryCard` y `CartSummary`
+  se reutilizan en el pedido manual del admin.
 - **`lib/screens/profile_screen.dart`**: cuenta del cliente y «Mis pedidos» en vivo.
 - **`lib/screens/order_detail_screen.dart`**: detalle de un pedido en vivo. Para el
   admin añade la barra con «Marcar como …» y «Cancelar».
 - **`lib/screens/admin/admin_shell.dart`**: pestañas del admin (Inicio, Pedidos,
-  Productos, IA), `AdminTopBar` con el menú de la cuenta y la pestaña provisional de
-  Productos con la carga del catálogo de ejemplo.
+  Productos, IA), el botón central «Nuevo pedido» y `AdminTopBar` con el menú de la cuenta.
 - **`lib/screens/admin/admin_orders_screen.dart`**: gestión de pedidos con filtros.
+- **`lib/screens/admin/admin_dashboard_screen.dart`**: Panel general (mockup admin 01).
+- **`lib/screens/admin/admin_products_screen.dart`**: catálogo del admin (mockup admin 03)
+  y la opción «Restablecer catálogo de ejemplo».
+- **`lib/screens/admin/product_form_screen.dart`**: crear o editar un producto y sus opciones.
+- **`lib/screens/admin/new_order_screen.dart`**: pedido manual del admin.
 
 ### Componentes visuales y utilidades
 
-- **`lib/widgets/keki_nav.dart`**: `KekiBottomNav` (barra inferior con botón central
-  de IA, usada por cliente y admin) e `InfoPlaceholder` (mensajes de vacío o error).
+- **`lib/widgets/keki_nav.dart`**: `KekiBottomNav` (barra inferior con botón central:
+  IA en el cliente, «Nuevo pedido» en el admin) e `InfoPlaceholder` (mensajes de vacío o error).
 - **`lib/widgets/order_widgets.dart`**: `StatusChip` con los colores de estado del
   mockup, `InitialAvatar`, `OrderCard` para las listas y `shortOrderId`.
 - **`lib/widgets/product_art.dart`**, **`product_card.dart`**, **`product_widgets.dart`**:
   ilustraciones con `CustomPaint`, tarjeta de producto, calificación, favorito y botón
   con degradado (sin cambios).
 - **`lib/core/format.dart`**: `cop` para pesos colombianos y, nuevo, `shortDate`,
-  `relativeDay` («Hoy», «Mañana», «Ayer») y `clock` para fechas y horas en español.
+  `relativeDay` («Hoy», «Mañana», «Ayer»), `clock` y `greeting` («Buenas tardes»).
 - **`lib/core/snack.dart`** y **`lib/core/theme.dart`**: avisos breves y paleta del mockup.
 - **`test/widget_test.dart`**: formato de precios y fechas, conversión de productos,
-  validación del carrito, aviso de pedidos nuevos, el recorrido de Explorar, el login
-  por rol y el recorrido completo cliente → admin (confirmar pedido y cambiar estado).
+  validación del carrito, aviso de pedidos nuevos, cifras del panel, stock al preparar
+  y cancelar, favoritos guardados en la cuenta, el recorrido de Inicio y Explorar, el
+  login por rol, el recorrido cliente → admin, la creación y desactivación de un
+  producto y el pedido manual del admin.
 
 ## Flujo de la aplicación
 
@@ -307,8 +387,13 @@ los controladores los convierten en estado para la interfaz.
 - El total del pedido se calcula en el celular. Las reglas validan dueño, estado y
   que haya productos, pero no pueden comparar precios con el catálogo; para eso haría
   falta una Cloud Function (fuera del alcance del curso).
-- El stock aún no se descuenta al pedir (la gestión de stock llega en la entrega 3).
-- Los favoritos siguen en memoria; en la entrega 3 se guardarán en la cuenta.
+- El stock se descuenta al preparar, no al pedir: el cliente puede pedir un producto
+  agotado (las tortas se hacen por encargo) y el admin lo ve en el aviso de stock.
+- Si al preparar no alcanza el stock, queda en 0; al cancelar se devuelven todas las
+  unidades del pedido, así que en ese caso el stock puede quedar un poco por encima.
+- El Panel general usa los últimos 200 pedidos (los mismos que muestra Pedidos).
+- Las opciones «Clientes» y «Configuración» del menú del admin no tienen mockup y
+  quedan como trabajo futuro.
 - Las notificaciones de pedidos nuevos solo se ven con la app del admin abierta
   (no son notificaciones push).
 
