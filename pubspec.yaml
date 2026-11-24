@@ -19,6 +19,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   # Habilita los iconos de Material usados por las pantallas.
@@ -28,3 +29,17 @@ flutter:
   # fotos_originales/, que no se incluye en la app).
   assets:
     - assets/productos/
+
+# Logo de la app (pingüino con torta). Para regenerar los íconos de Android e
+# iOS después de cambiar assets/icon/app_icon.png:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/icon/app_icon.png"
+  android: "ic_launcher"
+  ios: true
+  remove_alpha_ios: true
+  # Android 8+ recorta el ícono en distintas formas: fondo rosado del logo y
+  # el dibujo un poco más pequeño para que no se corte.
+  adaptive_icon_background: "#FFC8E6"
+  adaptive_icon_foreground: "assets/icon/app_icon.png"
+  adaptive_icon_foreground_inset: 16
