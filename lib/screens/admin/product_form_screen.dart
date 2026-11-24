@@ -7,6 +7,7 @@ import '../../core/snack.dart';
 import '../../core/theme.dart';
 import '../../models/product.dart';
 import '../../state/app_scope.dart';
+import '../../data/products_data.dart';
 import '../../widgets/product_art.dart';
 import '../../widgets/product_widgets.dart';
 
@@ -82,6 +83,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late ProductCategory _category =
       _original?.category ?? ProductCategory.tortas;
   late ArtKind _art = _original?.art ?? ArtKind.roseCake;
+  late String? _image = _original?.image;
   late bool _noPreservatives = _original?.noPreservatives ?? false;
   late bool _active = _original?.active ?? true;
   late final List<_GroupDraft> _groups = [
@@ -165,6 +167,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       reviewCount: _original?.reviewCount,
       noPreservatives: _noPreservatives,
       art: _art,
+      image: _image,
       options: options,
       active: _active,
       stock: int.parse(_stock.text),
@@ -276,7 +279,52 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(18, 4, 18, 24),
           children: [
-            _section('Ilustración'),
+            _section('Foto'),
+            SizedBox(
+              height: 76,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: kProductImages.length + 1,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (context, i) {
+                  final path = i == 0 ? null : kProductImages[i - 1];
+                  final selected = path == _image;
+                  return Semantics(
+                    button: true,
+                    selected: selected,
+                    label: path == null ? 'Sin foto' : 'Foto $i',
+                    child: GestureDetector(
+                      onTap: () => setState(() => _image = path),
+                      child: Container(
+                        width: 64,
+                        decoration: BoxDecoration(
+                          color: KekiColors.bg,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                            color: selected
+                                ? KekiColors.blueDeep
+                                : const Color(0xFFEEF1F4),
+                            width: selected ? 2.5 : 1,
+                          ),
+                        ),
+                        clipBehavior: Clip.antiAlias,
+                        child: path == null
+                            ? const Center(
+                                child: Text(
+                                  'Sin foto',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                      fontSize: 10.5, color: KekiColors.text2),
+                                ),
+                              )
+                            : ProductArt(kind: _art, image: path),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            _section('Ilustración (si no tiene foto)'),
             SizedBox(
               height: 64,
               child: ListView.separated(

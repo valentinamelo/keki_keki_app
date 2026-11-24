@@ -13,3 +13,6 @@ pubspec.lock
 android/.gradle/
 android/local.properties
 ios/Pods/
+
+# Fotos originales en alta resolución (la app usa las versiones de assets/productos)
+fotos_originales/

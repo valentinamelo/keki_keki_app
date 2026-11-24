@@ -35,11 +35,16 @@ class CartLine {
     required this.product,
     required this.selection,
     required this.quantity,
+    this.fromAssistant = false,
   });
 
   final Product product;
   final Map<String, int> selection;
   int quantity;
+
+  /// `true` si la línea la agregó el Asistente Keki IA (el pedido queda con
+  /// origen «ia»).
+  bool fromAssistant;
 
   /// Precio unitario con los recargos de la personalización.
   int get unitPrice => product.priceFor(selection);
@@ -59,6 +64,7 @@ class CartLine {
         productId: product.id,
         name: product.name,
         art: product.art,
+        image: product.image,
         options: summary,
         unitPrice: unitPrice,
         quantity: quantity,
@@ -77,6 +83,7 @@ class CartController extends ChangeNotifier {
   String _address = '';
   String _notes = '';
   bool _submitting = false;
+  String? _conversationId;
 
   /// Devuelve las líneas como lista no modificable desde fuera del controlador.
   List<CartLine> get lines => List.unmodifiable(_lines);
@@ -111,6 +118,13 @@ class CartController extends ChangeNotifier {
   /// `true` mientras se guarda el pedido en la base de datos.
   bool get submitting => _submitting;
 
+  /// `true` si alguna línea viene de una recomendación del asistente.
+  bool get hasAssistantItems => _lines.any((l) => l.fromAssistant);
+
+  /// Conversación del asistente que llevó al carrito, si sigue en él.
+  String? get assistantConversationId =>
+      hasAssistantItems ? _conversationId : null;
+
   /// Explica qué falta para poder confirmar, o `null` si todo está listo.
   String? get missingInfo {
     if (_lines.isEmpty) return 'Agrega productos al carrito.';
@@ -124,10 +138,20 @@ class CartController extends ChangeNotifier {
   }
 
   /// Agrega producto y opciones; acumula cantidad si ya existe una línea igual.
-  void add(Product product, Map<String, int> selection, {int quantity = 1}) {
+  /// Con [conversationId] la línea queda marcada como recomendada por el
+  /// asistente en esa conversación.
+  void add(
+    Product product,
+    Map<String, int> selection, {
+    int quantity = 1,
+    String? conversationId,
+  }) {
+    final fromAssistant = conversationId != null;
+    if (fromAssistant) _conversationId = conversationId;
     for (final line in _lines) {
       if (line.matches(product, selection)) {
         line.quantity = (line.quantity + quantity).clamp(1, maxQuantity);
+        line.fromAssistant = line.fromAssistant || fromAssistant;
         notifyListeners();
         return;
       }
@@ -135,7 +159,8 @@ class CartController extends ChangeNotifier {
     _lines.add(CartLine(
       product: product,
       selection: Map<String, int>.of(selection),
-      quantity: quantity,
+      quantity: quantity.clamp(1, maxQuantity),
+      fromAssistant: fromAssistant,
     ));
     notifyListeners();
   }
@@ -169,12 +194,15 @@ class CartController extends ChangeNotifier {
   /// Elimina todos los productos y notifica a las pantallas que escuchan.
   void clear() {
     _lines.clear();
+    _conversationId = null;
     notifyListeners();
   }
 
   /// Construye el pedido de [user] con el contenido actual del carrito.
-  /// [origin] indica desde dónde se hizo (catálogo, asistente o manual).
-  Order buildOrder(AppUser user, {OrderOrigin origin = OrderOrigin.catalogo}) {
+  /// [origin] indica desde dónde se hizo (catálogo, asistente o manual); si
+  /// no se indica, es «ia» cuando el asistente agregó algún producto.
+  Order buildOrder(AppUser user, {OrderOrigin? origin}) {
+    origin ??= hasAssistantItems ? OrderOrigin.ia : OrderOrigin.catalogo;
     final day = _date!;
     return Order(
       clientId: user.uid,
@@ -196,7 +224,7 @@ class CartController extends ChangeNotifier {
   Future<String> placeOrder(
     OrderRepository orders,
     AppUser user, {
-    OrderOrigin origin = OrderOrigin.catalogo,
+    OrderOrigin? origin,
   }) async {
     final missing = missingInfo;
     if (missing != null) throw StateError(missing);
@@ -205,6 +233,7 @@ class CartController extends ChangeNotifier {
     try {
       final id = await orders.create(buildOrder(user, origin: origin));
       _lines.clear();
+      _conversationId = null;
       _date = null;
       _slot = null;
       _notes = '';

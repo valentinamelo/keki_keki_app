@@ -82,7 +82,7 @@ class _StatGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cards = [
-      _StatCard(
+      StatCard(
         icon: Icons.attach_money_rounded,
         tint: KekiColors.blueTint,
         iconColor: KekiColors.blueDeep,
@@ -91,7 +91,7 @@ class _StatGrid extends StatelessWidget {
         trend: stats.salesTrend,
         trendHint: 'frente a ayer',
       ),
-      _StatCard(
+      StatCard(
         icon: Icons.shopping_bag_outlined,
         tint: KekiColors.pinkTint,
         iconColor: KekiColors.pinkDeep,
@@ -99,7 +99,7 @@ class _StatGrid extends StatelessWidget {
         label: 'Pedidos pendientes',
         onTap: onOpenPending,
       ),
-      _StatCard(
+      StatCard(
         icon: Icons.check_rounded,
         tint: const Color(0xFFEAF7EF),
         iconColor: KekiColors.green,
@@ -108,13 +108,13 @@ class _StatGrid extends StatelessWidget {
         trend: stats.deliveredTrend,
         trendHint: 'frente a la semana pasada',
       ),
-      _StatCard(
+      StatCard(
         icon: Icons.auto_awesome_outlined,
         tint: const Color(0xFFFFF6E8),
         iconColor: const Color(0xFFB8801F),
         value: '${stats.aiOrdersThisWeek}',
         label: 'Pedidos vía Asistente IA',
-        footnote: 'Disponible en la entrega 4',
+        footnote: 'Esta semana',
       ),
     ];
     return Column(
@@ -137,9 +137,11 @@ class _StatGrid extends StatelessWidget {
   }
 }
 
-class _StatCard extends StatelessWidget {
+/// Tarjeta de cifra del panel (.stat-card); también la usa la pestaña IA.
+class StatCard extends StatelessWidget {
   /// Crea una tarjeta con icono, tendencia opcional, valor y etiqueta.
-  const _StatCard({
+  const StatCard({
+    super.key,
     required this.icon,
     required this.tint,
     required this.iconColor,
@@ -255,17 +257,23 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _Panel extends StatelessWidget {
+/// Panel blanco con título (.panel); también lo usa la pestaña IA.
+class DashboardPanel extends StatelessWidget {
   /// Crea un panel blanco con título, subtítulo y contenido.
-  const _Panel({
+  const DashboardPanel({
+    super.key,
     required this.title,
     required this.subtitle,
     required this.child,
+    this.trailing,
   });
 
   final String title;
   final String subtitle;
   final Widget child;
+
+  /// Acción opcional a la derecha del título (por ejemplo «Ver todas»).
+  final Widget? trailing;
 
   /// Dibuja el panel con el estilo .panel del mockup.
   @override
@@ -281,13 +289,27 @@ class _Panel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w700),
-          ),
-          Text(
-            subtitle,
-            style: const TextStyle(fontSize: 11, color: KekiColors.text2),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                          fontSize: 13.5, fontWeight: FontWeight.w700),
+                    ),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                          fontSize: 11, color: KekiColors.text2),
+                    ),
+                  ],
+                ),
+              ),
+              if (trailing != null) trailing!,
+            ],
           ),
           const SizedBox(height: 12),
           child,
@@ -325,7 +347,7 @@ class _WeekSalesPanelState extends State<_WeekSalesPanel> {
     final peak = max == 0 ? -1 : sales.indexOf(max);
     final today = DateTime.now().weekday - 1;
 
-    return _Panel(
+    return DashboardPanel(
       title: 'Ventas de la semana',
       subtitle: 'Lunes a domingo · total ${cop(widget.stats.weekTotal)}',
       child: max == 0
@@ -422,7 +444,7 @@ class _TopProductsPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final top = stats.topProducts;
-    return _Panel(
+    return DashboardPanel(
       title: 'Más vendidos',
       subtitle: 'Esta semana · sin pedidos cancelados',
       child: top.isEmpty
@@ -446,7 +468,8 @@ class _TopProductsPanel extends StatelessWidget {
                           child: SizedBox(
                             width: 44,
                             height: 44,
-                            child: ProductArt(kind: top[i].art),
+                            child: ProductArt(
+                                kind: top[i].art, image: top[i].image),
                           ),
                         ),
                         const SizedBox(width: 12),

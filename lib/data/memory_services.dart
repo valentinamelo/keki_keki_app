@@ -4,6 +4,7 @@
 import 'dart:async';
 
 import '../models/app_user.dart';
+import '../models/assistant.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 import 'products_data.dart';
@@ -20,6 +21,7 @@ AppServices memoryServices({AppUser? signedIn}) {
     users: auth,
     products: products,
     orders: MemoryOrderRepository(products: products),
+    assistant: MemoryAssistantRepository(),
   );
 }
 
@@ -137,7 +139,9 @@ class MemoryProductRepository implements ProductRepository {
       );
 
   @override
-  Future<void> seed(List<Product> products) async {
+  Future<void> seed(List<Product> products,
+      {List<String> remove = const []}) async {
+    _products.removeWhere((p) => remove.contains(p.id));
     // Igual que en Firestore: reemplaza los de ejemplo y conserva los demás.
     final ids = {for (final p in products) p.id};
     _products = [...products, ..._products.where((p) => !ids.contains(p.id))];
@@ -244,4 +248,60 @@ class MemoryOrderRepository implements OrderRepository {
     );
     _changes.add(null);
   }
+}
+
+/// Ajustes y conversaciones del asistente en memoria.
+class MemoryAssistantRepository implements AssistantRepository {
+  AssistantSettings _settings = const AssistantSettings();
+  final List<Conversation> _conversations = [];
+  final StreamController<void> _changes = StreamController.broadcast();
+  int _nextId = 1;
+
+  @override
+  Stream<AssistantSettings> watchSettings() =>
+      _current(() => _settings, _changes.stream);
+
+  @override
+  Future<void> saveSettings(AssistantSettings settings) async {
+    _settings = settings;
+    _changes.add(null);
+  }
+
+  @override
+  Future<String> logConversation(Conversation conversation) async {
+    final saved = conversation.copyWith(
+      id: 'conversacion-${_nextId++}',
+      createdAt: DateTime.now(),
+    );
+    _conversations.add(saved);
+    _changes.add(null);
+    return saved.id;
+  }
+
+  @override
+  Future<void> updateConversation(
+    String id, {
+    ConversationResult? result,
+    String? orderId,
+    String? productId,
+    String? productName,
+    int? price,
+  }) async {
+    final i = _conversations.indexWhere((c) => c.id == id);
+    if (i < 0) return;
+    _conversations[i] = _conversations[i].copyWith(
+      result: result,
+      orderId: orderId,
+      productId: productId,
+      productName: productName,
+      price: price,
+    );
+    _changes.add(null);
+  }
+
+  @override
+  Stream<List<Conversation>> watchConversations() => _current(
+        () => _conversations.reversed.toList(),
+        _changes.stream,
+      );
 }

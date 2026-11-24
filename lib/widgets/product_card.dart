@@ -52,7 +52,8 @@ class ProductCard extends StatelessWidget {
                     children: [
                       Hero(
                         tag: artHeroTag(product.id),
-                        child: ProductArt(kind: product.art),
+                        child:
+                            ProductArt(kind: product.art, image: product.image),
                       ),
                       Positioned(
                         top: 8,

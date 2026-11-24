@@ -109,8 +109,9 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('¿Restablecer el catálogo de ejemplo?'),
           content: Text(
-            'Se volverán a escribir los ${kProducts.length} productos de '
-            'ejemplo con sus precios, opciones y stock originales. Los '
+            'Se volverán a escribir los ${kProducts.length} productos del '
+            'catálogo con sus precios, opciones y stock originales, y se '
+            'borran los productos de ejemplo de entregas anteriores. Los '
             'productos que hayas creado se conservan.',
           ),
           actions: [
@@ -129,7 +130,11 @@ class _AdminProductsScreenState extends State<AdminProductsScreen> {
     }
     setState(() => _seeding = true);
     try {
-      await AppScope.of(context).services.products.seed(kProducts);
+      // También quita los productos de ejemplo de las entregas anteriores.
+      await AppScope.of(context)
+          .services
+          .products
+          .seed(kProducts, remove: kLegacySampleIds);
       if (mounted) showKekiSnack(context, 'Catálogo de ejemplo cargado');
     } catch (e) {
       if (mounted) showKekiSnack(context, 'No se pudo cargar: $e');
@@ -458,7 +463,7 @@ class _AdminProductCard extends StatelessWidget {
             SizedBox(
               height: 82,
               width: double.infinity,
-              child: ProductArt(kind: p.art),
+              child: ProductArt(kind: p.art, image: p.image),
             ),
             Expanded(
               child: Padding(

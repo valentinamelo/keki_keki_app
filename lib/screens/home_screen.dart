@@ -10,6 +10,7 @@ import '../state/app_scope.dart';
 import '../widgets/keki_nav.dart';
 import '../widgets/order_widgets.dart';
 import '../widgets/product_card.dart';
+import 'assistant_screen.dart';
 import 'product_detail_screen.dart';
 
 /// Inicio: saludo, buscador, categorías, destacados, favoritos y la tarjeta
@@ -294,7 +295,7 @@ class _AiCard extends StatelessWidget {
   /// Crea la tarjeta «¿No sabes qué elegir?» del asistente.
   const _AiCard();
 
-  /// Dibuja la tarjeta con degradado; el asistente llega en la entrega 4.
+  /// Dibuja la tarjeta con degradado que abre el asistente.
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -346,8 +347,7 @@ class _AiCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           FilledButton.icon(
-            onPressed: () => showKekiSnack(
-                context, 'El asistente Keki IA llega en la entrega 4'),
+            onPressed: () => openAssistant(context),
             style: FilledButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: KekiColors.text,

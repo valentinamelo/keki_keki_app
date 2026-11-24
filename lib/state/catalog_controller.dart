@@ -65,6 +65,9 @@ class CatalogController extends ChangeNotifier {
   /// Último error al leer el catálogo, o `null` si todo va bien.
   Object? get error => _error;
 
+  /// Todos los productos disponibles, sin filtros (los usa el asistente).
+  List<Product> get all => _all;
+
   /// Cantidad de productos disponibles, sin contar filtros.
   int get totalCount => _all.length;
 
@@ -78,10 +81,12 @@ class CatalogController extends ChangeNotifier {
   SortMode get sort => _sort;
 
   /// Mejor calificados primero: los «Destacados de la semana» del Inicio.
+  /// Mientras ningún producto tenga calificación, son los primeros del
+  /// catálogo.
   List<Product> get featured {
     final list = _all.where((p) => p.rating != null).toList()
       ..sort((a, b) => b.rating!.compareTo(a.rating!));
-    return list.take(5).toList();
+    return (list.isEmpty ? _all : list).take(5).toList();
   }
 
   /// Productos marcados como favoritos, en el orden del catálogo.

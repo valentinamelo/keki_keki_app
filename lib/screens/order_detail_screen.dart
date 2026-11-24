@@ -232,7 +232,7 @@ class _Body extends StatelessWidget {
                         child: SizedBox(
                           width: 46,
                           height: 46,
-                          child: ProductArt(kind: item.art),
+                          child: ProductArt(kind: item.art, image: item.image),
                         ),
                       ),
                       const SizedBox(width: 12),

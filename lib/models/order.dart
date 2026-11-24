@@ -64,8 +64,8 @@ enum DeliveryMode {
       key == 'recoger' ? DeliveryMode.recoger : DeliveryMode.domicilio;
 }
 
-/// Canal desde el que se creó el pedido (el asistente llega en la entrega 4).
-/// [manual] es un pedido que el administrador registra para un cliente.
+/// Canal desde el que se creó el pedido: catálogo, Asistente Keki IA o
+/// pedido manual que el administrador registra para un cliente.
 enum OrderOrigin {
   catalogo('catalogo', 'Catálogo'),
   ia('ia', 'Asistente IA'),
@@ -89,6 +89,7 @@ class OrderItem {
     required this.productId,
     required this.name,
     required this.art,
+    this.image,
     required this.options,
     required this.unitPrice,
     required this.quantity,
@@ -97,6 +98,9 @@ class OrderItem {
   final String productId;
   final String name;
   final ArtKind art;
+
+  /// Foto del producto al momento del pedido (o `null`: se usa [art]).
+  final String? image;
 
   /// Resumen de la personalización, por ejemplo «15 pers. · Vainilla».
   final String options;
@@ -111,6 +115,7 @@ class OrderItem {
         'productoId': productId,
         'nombre': name,
         'ilustracion': art.name,
+        'imagen': image,
         'opciones': options,
         'precioUnitario': unitPrice,
         'cantidad': quantity,
@@ -121,6 +126,7 @@ class OrderItem {
         productId: map['productoId'] as String? ?? '',
         name: map['nombre'] as String? ?? '',
         art: ArtKind.fromName(map['ilustracion']),
+        image: map['imagen'] as String?,
         options: map['opciones'] as String? ?? '',
         unitPrice: (map['precioUnitario'] as num?)?.toInt() ?? 0,
         quantity: (map['cantidad'] as num?)?.toInt() ?? 1,

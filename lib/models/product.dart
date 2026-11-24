@@ -5,7 +5,7 @@ enum ProductCategory {
   tortas('Tortas'),
   cupcakes('Cupcakes'),
   galletas('Galletas'),
-  brownies('Brownies');
+  rollos('Rollos');
 
   /// Asocia cada categoría con el nombre que se presenta en la interfaz.
   const ProductCategory(this.label);
@@ -24,7 +24,10 @@ enum ArtKind {
   chocolateCake,
   brownie,
   cupcakes,
-  cookies;
+  cookies,
+  creamCake,
+  orangeCake,
+  cinnamonRoll;
 
   /// Busca la ilustración guardada en Firestore por su nombre.
   static ArtKind fromName(Object? name) => ArtKind.values
@@ -100,6 +103,7 @@ class Product {
     required this.description,
     required this.basePrice,
     required this.art,
+    this.image,
     this.detailName,
     this.highlight,
     this.rating,
@@ -129,6 +133,10 @@ class Product {
   final int? reviewCount;
   final bool noPreservatives;
   final ArtKind art;
+
+  /// Foto del producto (ruta de un asset, p. ej. `assets/productos/x.jpg`).
+  /// Si es `null` se muestra la ilustración [art].
+  final String? image;
   final List<OptionGroup> options;
 
   /// Si es `false`, el producto no se muestra a los clientes.
@@ -157,6 +165,7 @@ class Product {
         'resenas': reviewCount,
         'sinConservantes': noPreservatives,
         'ilustracion': art.name,
+        'imagen': image,
         'opciones': [for (final g in options) g.toMap()],
         'activo': active,
         'stock': stock,
@@ -176,6 +185,7 @@ class Product {
         reviewCount: (map['resenas'] as num?)?.toInt(),
         noPreservatives: map['sinConservantes'] as bool? ?? false,
         art: ArtKind.fromName(map['ilustracion']),
+        image: map['imagen'] as String?,
         options: [
           for (final g in (map['opciones'] as List? ?? const []))
             OptionGroup.fromMap(Map<String, dynamic>.from(g as Map)),

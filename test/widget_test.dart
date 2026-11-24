@@ -3,6 +3,7 @@
 // cumplen el mismo contrato que Firebase.
 
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,10 +59,28 @@ void main() {
     expect(copy.summaryFor(big), original.summaryFor(big));
   });
 
+  // Cada producto del catálogo tiene su foto y el archivo existe.
+  test('Los productos tienen foto y se guarda en el pedido', () {
+    expect(kProducts, hasLength(10));
+    for (final p in kProducts) {
+      expect(p.image, isNotNull, reason: p.id);
+      expect(File(p.image!).existsSync(), isTrue, reason: p.image);
+      expect(Product.fromMap(p.id, p.toMap()).image, p.image);
+    }
+    final torta = kProducts.firstWhere((p) => p.id == 'torta-zanahoria');
+    expect(torta.priceFor({'tamano': 2}), 58000);
+    final item = CartLine(
+      product: torta,
+      selection: torta.defaultSelection,
+      quantity: 1,
+    ).toOrderItem();
+    expect(OrderItem.fromMap(item.toMap()).image, torta.image);
+  });
+
   // El carrito exige entrega completa y calcula domicilio y total.
   test('CartController valida la entrega y arma el pedido', () {
     final cart = CartController();
-    final cupcakes = kProducts.firstWhere((p) => p.id == 'cupcakes-duo-pastel');
+    final cupcakes = kProducts.firstWhere((p) => p.id == 'cupcakes');
     cart.add(cupcakes, cupcakes.defaultSelection, quantity: 2);
     expect(cart.missingInfo, contains('fecha'));
 
@@ -82,14 +101,13 @@ void main() {
       notes: '',
     );
     expect(cart.missingInfo, isNull);
-    expect(cart.total, 44000);
+    expect(cart.total, 42000);
 
     final order = cart.buildOrder(kDemoClient);
     expect(order.deliveryDate, DateTime(2026, 9, 25, 15));
-    expect(order.total, 44000);
+    expect(order.total, 42000);
     expect(order.toMap()['estado'], 'pendiente');
-    expect(Order.fromMap('x', order.toMap()).itemsSummary,
-        'Cupcakes duo pastel x2');
+    expect(Order.fromMap('x', order.toMap()).itemsSummary, 'Cupcakes x2');
   });
 
   // El aviso en vivo solo salta para pedidos que llegan después de cargar.
@@ -145,21 +163,21 @@ void main() {
     await tester.tap(find.text('Explorar'));
     await tester.pumpAndSettle();
     expect(find.text('Descubre nuestros productos'), findsOneWidget);
-    expect(find.text('Torta fresa silvestre'), findsOneWidget);
+    expect(find.text('Torta de chocolate'), findsOneWidget);
 
-    await tester.tap(find.text('Cupcakes'));
+    await tester.tap(find.text('Galletas'));
     await tester.pumpAndSettle();
-    expect(find.text('Cupcakes duo pastel'), findsOneWidget);
-    expect(find.text('Torta fresa silvestre'), findsNothing);
+    expect(find.text('Galletas con chips de chocolate'), findsOneWidget);
+    expect(find.text('Torta de chocolate'), findsNothing);
 
-    await tester.tap(find.text('Cupcakes duo pastel'));
+    await tester.tap(find.text('Galletas con chips de chocolate'));
     await tester.pumpAndSettle();
     expect(find.textContaining('Agregar al carrito'), findsOneWidget);
     expect(find.text('Presentación'), findsOneWidget);
     expect(find.text('Caja x6'), findsOneWidget);
     expect(tester.getSize(find.byType(GradientButton)).height, lessThan(100));
-    expect(
-        tester.getTopLeft(find.text('Cupcakes duo pastel')).dy, lessThan(280));
+    expect(tester.getTopLeft(find.text('Galletas con chips de chocolate')).dy,
+        lessThan(280));
 
     await tester.tap(find.textContaining('Agregar al carrito'));
     await tester.pump(const Duration(milliseconds: 300));
@@ -199,10 +217,10 @@ void main() {
     await tester.pumpWidget(KekiApp(services: services));
     await settle(tester);
 
-    // Agregar rápido una caja de brownies y abrir el carrito.
+    // Agregar rápido una caja de rollos de canela y abrir el carrito.
     await tester.tap(find.text('Explorar'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'brownie');
+    await tester.enterText(find.byType(TextField), 'canela');
     await tester.pumpAndSettle();
     await tester.tap(find.byIcon(Icons.add_rounded).first);
     await tester.pumpAndSettle();
@@ -223,7 +241,7 @@ void main() {
     await tester.tap(find.text('Guardar entrega'));
     await tester.pumpAndSettle();
     expect(find.textContaining('3:00–5:00 PM'), findsOneWidget);
-    expect(find.text('\$24.000'), findsOneWidget); // 18.000 + domicilio
+    expect(find.text('\$18.000'), findsOneWidget); // 12.000 + domicilio
 
     await tester.tap(find.text('Confirmar pedido'));
     await settle(tester);
@@ -257,16 +275,16 @@ void main() {
     expect(find.text('En preparación · 1'), findsOneWidget);
     expect(find.text('Pendientes · 0'), findsOneWidget);
 
-    // Pasar a «En preparación» descontó una caja del stock (26 → 25).
+    // Pasar a «En preparación» descontó una caja del stock (20 → 19).
     final products = await services.products.watchProducts().first;
-    expect(products.firstWhere((p) => p.id == 'brownie-doble-cacao').stock, 25);
+    expect(products.firstWhere((p) => p.id == 'rollos-canela').stock, 19);
   });
 
   // Las cifras del panel salen de los pedidos reales.
   test('DashboardStats calcula ventas, entregas y más vendidos', () {
     final now = DateTime(2026, 11, 4, 15); // miércoles
-    final brownie = kProducts.firstWhere((p) => p.id == 'brownie-doble-cacao');
-    final cupcakes = kProducts.firstWhere((p) => p.id == 'cupcakes-duo-pastel');
+    final rollos = kProducts.firstWhere((p) => p.id == 'rollos-canela');
+    final cupcakes = kProducts.firstWhere((p) => p.id == 'cupcakes');
     OrderItem item(Product p, int qty) => OrderItem(
           productId: p.id,
           name: p.name,
@@ -299,26 +317,26 @@ void main() {
         );
 
     final stats = DashboardStats.from([
-      order(DateTime(2026, 11, 4, 9), [item(brownie, 2)]), // hoy: 36.000
+      order(DateTime(2026, 11, 4, 9), [item(rollos, 2)]), // hoy: 24.000
       order(DateTime(2026, 11, 4, 10), [item(cupcakes, 1)],
           status: OrderStatus.cancelado), // no cuenta
       order(DateTime(2026, 11, 3, 9), [item(cupcakes, 1)],
           status: OrderStatus.entregado,
-          deliveredAt: DateTime(2026, 11, 3, 16)), // ayer: 22.000
-      order(DateTime(2026, 10, 28, 9), [item(brownie, 5)],
+          deliveredAt: DateTime(2026, 11, 3, 16)), // ayer: 21.000
+      order(DateTime(2026, 10, 28, 9), [item(rollos, 5)],
           status: OrderStatus.entregado,
           deliveredAt: DateTime(2026, 10, 28, 16)), // semana pasada
     ], now: now);
 
-    expect(stats.salesToday, 36000);
-    expect(stats.salesYesterday, 22000);
-    expect(stats.salesTrend, 64); // (36 - 22) / 22 ≈ 64 %
+    expect(stats.salesToday, 24000);
+    expect(stats.salesYesterday, 21000);
+    expect(stats.salesTrend, 14); // (24 - 21) / 21 ≈ 14 %
     expect(stats.pending, 1);
     expect(stats.deliveredThisWeek, 1);
     expect(stats.deliveredLastWeek, 1);
-    expect(stats.weekSales, [0, 22000, 36000, 0, 0, 0, 0]);
-    expect(stats.topProducts.map((t) => t.name),
-        ['Brownie doble cacao', 'Cupcakes duo pastel']);
+    expect(stats.weekSales, [0, 21000, 24000, 0, 0, 0, 0]);
+    expect(
+        stats.topProducts.map((t) => t.name), ['Rollos de canela', 'Cupcakes']);
     expect(stats.aiOrdersThisWeek, 0);
   });
 
@@ -326,7 +344,7 @@ void main() {
   test('El stock baja al preparar y se devuelve al cancelar', () async {
     final services = memoryServices();
     final cart = CartController();
-    final torta = kProducts.firstWhere((p) => p.id == 'torta-azul-vainilla');
+    final torta = kProducts.firstWhere((p) => p.id == 'torta-vainilla');
     cart.add(torta, torta.defaultSelection, quantity: 2);
     cart.setDelivery(
       mode: DeliveryMode.recoger,
@@ -340,11 +358,11 @@ void main() {
         .firstWhere((p) => p.id == torta.id)
         .stock;
 
-    expect(await stock(), 3);
+    expect(await stock(), 10);
     await services.orders.updateStatus(id, OrderStatus.enPreparacion);
-    expect(await stock(), 1);
+    expect(await stock(), 8);
     await services.orders.updateStatus(id, OrderStatus.cancelado);
-    expect(await stock(), 3);
+    expect(await stock(), 10);
   });
 
   // Los favoritos se guardan en la cuenta y vuelven al iniciar sesión.
@@ -379,8 +397,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Productos'));
     await settle(tester);
-    expect(find.textContaining('con stock bajo'), findsOneWidget);
-    expect(find.textContaining('Torta azul vainilla (3)'), findsOneWidget);
+    expect(find.textContaining('10 activos · 0 con stock bajo'), findsOneWidget);
 
     await tester.tap(find.text('Nuevo'));
     await settle(tester);
@@ -388,12 +405,20 @@ void main() {
         find.widgetWithText(TextFormField, 'Nombre'), 'Cheesecake de maracuyá');
     await tester.enterText(find.widgetWithText(TextFormField, 'Descripción'),
         'Base de galleta y crema de maracuyá.');
+    final form = find
+        .ancestor(
+            of: find.widgetWithText(TextFormField, 'Nombre'),
+            matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(
+        find.widgetWithText(TextFormField, 'Precio base'), 150,
+        scrollable: form);
     await tester.enterText(
         find.widgetWithText(TextFormField, 'Precio base'), '54000');
     await tester.tap(find.text('Crear producto'));
     await settle(tester);
     expect(find.text('Cheesecake de maracuyá creado'), findsOneWidget);
-    expect(find.textContaining('8 activos'), findsOneWidget);
+    expect(find.textContaining('11 activos'), findsOneWidget);
 
     Future<List<String>> clientNames() async =>
         [for (final p in await services.products.watchProducts().first) p.name];
@@ -424,11 +449,19 @@ void main() {
         find.widgetWithText(TextField, 'Nombre del cliente'), 'Julián Pardo');
     await tester.tap(find.text('Agregar producto'));
     await settle(tester);
-    await tester.tap(find.text('Galletas de mantequilla'));
+    await tester.scrollUntilVisible(
+        find.text('Galletas con chips de chocolate'), 150,
+        scrollable: find
+            .ancestor(
+                of: find.text('Torta de chocolate'),
+                matching: find.byType(Scrollable))
+            .first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Galletas con chips de chocolate'));
     await settle(tester);
     await tester.tap(find.textContaining('Agregar al pedido'));
     await settle(tester);
-    expect(find.text('Galletas de mantequilla'), findsOneWidget);
+    expect(find.text('Galletas con chips de chocolate'), findsOneWidget);
 
     await tester.tap(find.text('Crear pedido'));
     await settle(tester);
@@ -444,6 +477,6 @@ void main() {
     final orders = await services.orders.watchAll().first;
     expect(orders.single.clientName, 'Julián Pardo');
     expect(orders.single.origin, OrderOrigin.manual);
-    expect(orders.single.total, 15000);
+    expect(orders.single.total, 10000);
   });
 }

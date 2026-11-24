@@ -7,6 +7,10 @@ rules_version = '2';
 //   (crear, editar, activar, borrar y ajustar stock).
 // - pedidos: el cliente crea y lee solo los suyos; solo el admin cambia el
 //   estado y registra pedidos manuales.
+// - conversaciones: el cliente registra y cierra las suyas con el asistente;
+//   el admin las lee todas para el panel IA.
+// - config/asistente: ajustes del asistente; todos los leen, solo el admin
+//   los cambia.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -58,6 +62,34 @@ service cloud.firestore {
              ['pendiente', 'en_preparacion', 'listo', 'entregado', 'cancelado'];
 
       allow delete: if false;
+    }
+
+    match /conversaciones/{conversationId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.clienteId == request.auth.uid);
+
+      allow create: if signedIn()
+        && request.resource.data.clienteId == request.auth.uid
+        && request.resource.data.resultado == 'en_chat'
+        && request.resource.data.creado == request.time;
+
+      // El cliente solo cambia el resultado, el pedido y el producto
+      // recomendado; no puede reasignar la conversación a otra persona.
+      allow update: if isAdmin()
+        || (signedIn()
+          && resource.data.clienteId == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['resultado', 'pedidoId', 'productoId',
+                         'productoNombre', 'precio', 'actualizado'])
+          && request.resource.data.resultado in
+               ['en_chat', 'compro', 'sin_compra']);
+
+      allow delete: if false;
+    }
+
+    match /config/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
     }
   }
 }

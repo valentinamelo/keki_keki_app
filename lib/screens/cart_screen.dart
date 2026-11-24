@@ -1,10 +1,13 @@
 // Carrito y confirmación del pedido (mockup 05 — Carrito / Pedido).
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../core/format.dart';
 import '../core/snack.dart';
 import '../core/theme.dart';
+import '../models/assistant.dart';
 import '../models/order.dart';
 import '../state/app_scope.dart';
 import '../state/cart_controller.dart';
@@ -57,7 +60,17 @@ class CartScreen extends StatelessWidget {
       return;
     }
     try {
+      final conversation = cart.assistantConversationId;
       final id = await cart.placeOrder(scope.services.orders, scope.user);
+      // El pedido nació de una recomendación: la conversación cuenta como
+      // compra en el panel del asistente.
+      if (conversation != null) {
+        unawaited(scope.services.assistant.updateConversation(
+          conversation,
+          result: ConversationResult.compro,
+          orderId: id,
+        ));
+      }
       if (!context.mounted) return;
       await showDialog<void>(
         context: context,
@@ -187,7 +200,8 @@ class CartItemTile extends StatelessWidget {
             child: SizedBox(
               width: 58,
               height: 58,
-              child: ProductArt(kind: line.product.art),
+              child:
+                  ProductArt(kind: line.product.art, image: line.product.image),
             ),
           ),
           const SizedBox(width: 12),

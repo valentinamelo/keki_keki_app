@@ -78,7 +78,7 @@ class _NewOrderScreenState extends State<NewOrderScreen> {
                           child: SizedBox(
                             width: 44,
                             height: 44,
-                            child: ProductArt(kind: p.art),
+                            child: ProductArt(kind: p.art, image: p.image),
                           ),
                         ),
                         title: Text(p.name,

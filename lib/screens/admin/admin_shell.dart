@@ -1,23 +1,26 @@
 // Contenedor de la app del administrador y su barra superior.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../core/format.dart';
 import '../../core/snack.dart';
 import '../../core/theme.dart';
+import '../../models/assistant.dart';
 import '../../models/order.dart';
 import '../../state/admin_orders_controller.dart';
 import '../../state/app_scope.dart';
 import '../../widgets/keki_nav.dart';
 import '../../widgets/order_widgets.dart';
+import 'admin_assistant_screen.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_orders_screen.dart';
 import 'admin_products_screen.dart';
 import 'new_order_screen.dart';
 
 /// Panel del administrador (mockups de administración): Panel general,
-/// Pedidos, Productos y el botón central «Nuevo pedido». La pestaña del
-/// asistente llega en la entrega 4.
+/// Pedidos, Productos, Asistente IA y el botón central «Nuevo pedido».
 class AdminShell extends StatefulWidget {
   /// Crea el contenedor del administrador.
   const AdminShell({super.key});
@@ -33,19 +36,32 @@ class _AdminShellState extends State<AdminShell> {
 
   int _tab = _dashboardTab;
   AdminOrdersController? _orders;
+  StreamSubscription<AssistantSettings>? _settingsSub;
+  bool _notifyAiOrders = true;
 
   /// Empieza a escuchar los pedidos la primera vez que hay acceso al scope.
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _orders ??= AdminOrdersController(
-      AppScope.of(context).services.orders.watchAll(),
+    if (_orders != null) return;
+    final services = AppScope.of(context).services;
+    // El ajuste «Notificar pedidos vía IA» de la pestaña IA decide si los
+    // pedidos del asistente muestran aviso.
+    _settingsSub = services.assistant.watchSettings().listen(
+          (s) => _notifyAiOrders = s.notifyOrders,
+          onError: (Object _) {},
+        );
+    _orders = AdminOrdersController(
+      services.orders.watchAll(),
       onNewOrder: (order) {
         // Los pedidos manuales los crea el propio admin: no hace falta avisar.
         if (!mounted || order.origin == OrderOrigin.manual) return;
+        final ai = order.origin == OrderOrigin.ia;
+        if (ai && !_notifyAiOrders) return;
         showKekiSnack(
           context,
-          'Nuevo pedido de ${order.clientName} · ${cop(order.total)}',
+          '${ai ? '✨ Nuevo pedido vía Asistente IA' : 'Nuevo pedido'} de '
+          '${order.clientName} · ${cop(order.total)}',
         );
       },
     );
@@ -54,6 +70,7 @@ class _AdminShellState extends State<AdminShell> {
   /// Deja de escuchar los pedidos al cerrar sesión.
   @override
   void dispose() {
+    _settingsSub?.cancel();
     _orders?.dispose();
     super.dispose();
   }
@@ -78,11 +95,7 @@ class _AdminShellState extends State<AdminShell> {
             ),
             AdminOrdersScreen(controller: orders),
             const AdminProductsScreen(),
-            const _Pending(
-              icon: Icons.auto_awesome_outlined,
-              title: 'Asistente Keki IA',
-              message: 'La configuración del asistente llega en la entrega 4.',
-            ),
+            const AdminAssistantScreen(),
           ],
         ),
         bottomNavigationBar: KekiBottomNav(
@@ -182,32 +195,6 @@ class AdminTopBar extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _Pending extends StatelessWidget {
-  /// Crea una pestaña del admin que aún no está implementada.
-  const _Pending({
-    required this.icon,
-    required this.title,
-    required this.message,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-
-  /// Muestra la barra superior y el mensaje del marcador de posición.
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        AdminTopBar(title: title, subtitle: 'Próximamente'),
-        Expanded(
-          child: InfoPlaceholder(icon: icon, title: title, message: message),
-        ),
-      ],
     );
   }
 }

@@ -11,7 +11,7 @@ lee el rol del usuario en Firestore y lo envía a la interfaz que le corresponde
 | 1 | Catálogo del cliente: Explorar y Producto (mockups 02 y 03) | ✅ |
 | 2 | Firebase, registro/inicio de sesión con roles, productos en Firestore, carrito y confirmación del pedido (mockup 05), gestión de pedidos del admin en tiempo real y reglas de seguridad | ✅ |
 | 3 | Administración de productos (crear, editar, activar, stock bajo), panel general con cifras reales, pedido manual del admin, inicio del cliente y favoritos guardados en la cuenta | ✅ |
-| 4 | Asistente IA, pulido y sustentación | Pendiente |
+| 4 | Asistente Keki IA (mockup 04), panel IA del admin con conversaciones y ajustes (mockup admin 04), «Personalizar con IA», pedidos vía asistente y pulido | ✅ |
 
 ## Cómo ejecutarla
 
@@ -52,12 +52,21 @@ Cuentas de prueba (contraseña `123456`): `cliente@keki.co` y `admin@keki.co`.
    `rol` de `"cliente"` a `"admin"`. Cierra sesión y vuelve a entrar.
    (Por seguridad, la app nunca permite que alguien se asigne el rol admin.)
 8. **Cargar el catálogo.** Como admin, ve a la pestaña **Productos** y pulsa
-   **Cargar catálogo de ejemplo**: se suben los 7 productos a la colección `productos`.
+   **Cargar catálogo de ejemplo**: se suben los 9 productos de la pastelería a la colección `productos`.
    Desde ese momento los clientes los ven en Explorar.
 
 > **Al pasar a la entrega 3:** vuelve a publicar [`firestore.rules`](firestore.rules)
 > (cambiaron) y, como admin, usa **Productos › ⋮ › Restablecer catálogo de ejemplo**
 > para que los productos cargados antes reciban sus valores de stock.
+
+> **Al pasar a la entrega 4:** vuelve a publicar [`firestore.rules`](firestore.rules):
+> se agregaron las colecciones `conversaciones` y `config`. Sin ese paso el asistente
+> funciona igual para el cliente, pero las conversaciones no se guardan y la pestaña
+> **IA** del admin muestra «Missing or insufficient permissions». Puedes pegarlas en la
+> consola o, desde la carpeta del proyecto (ya incluye `firebase.json` y `.firebaserc`):
+> ```bash
+> firebase deploy --only firestore:rules
+> ```
 
 > Si iOS se queja de la versión mínima al compilar, abre `ios/Podfile` y deja
 > `platform :ios, '15.0'`.
@@ -94,12 +103,72 @@ Las pruebas usan los servicios en memoria, así que no necesitan Firebase.
 8. El cliente marca favoritos, cierra sesión y vuelve a entrar: siguen ahí, y
    aparecen en **Inicio › Tus favoritos**.
 
+**Asistente Keki IA (entrega 4)**
+
+9. El cliente toca el botón central ✨ (o **Inicio › Recomiéndame una torta**) y
+   responde como en el mockup: «Cumpleaños de mi mamá», «Unas 20»,
+   «Entre $70.000 y $90.000», «Chocolate y frutos rojos». El asistente recomienda la
+   **Torta de chocolate · 18-20 pers. · $58.000**. También
+   entiende todo en un solo mensaje: «baby shower para 12 personas, de vainilla,
+   hasta 80 mil».
+10. Toca **Agregar al carrito** y confirma el pedido. En el admin llega el aviso
+    «✨ Nuevo pedido vía Asistente IA», el pedido tiene origen *Asistente IA* y la
+    tarjeta **Pedidos vía Asistente IA** del Panel general sube.
+11. En la pestaña **IA** del admin aparece la conversación con el resultado
+    **Compró** y se actualizan la conversión, el tiempo medio y el producto más
+    recomendado. Si el admin apaga **Asistente activo**, el cliente ve
+    «El asistente está descansando» la próxima vez que lo abre.
+12. En el detalle de un producto, **Personalizar con IA** abre el asistente enfocado en
+    ese producto: elige tamaño, sabor y relleno según lo que pida el cliente.
+
+## Qué incluye la entrega 4
+
+**Asistente Keki IA del cliente (mockup 04)** — `assistant_screen.dart`, `assistant_controller.dart`, `assistant_engine.dart`
+- Chat con el encabezado, las burbujas, la tarjeta «Encontré una opción para ti» y el
+  campo «Escribe tu mensaje…» del mockup, más respuestas rápidas (chips) e indicador
+  de «escribiendo…».
+- Hace las cuatro preguntas del mockup (ocasión, personas, presupuesto, sabores),
+  pero entiende texto libre en español: «unas 20», «entre 70 y 90 mil», «hasta
+  $60.000», «unos 80k», «me da igual», y varios datos en un solo mensaje. Si no
+  entiende, da un ejemplo. Después de recomendar se puede cambiar un dato («para 30
+  personas»), pedir **Ver otra opción** o **Empezar de nuevo**.
+- La recomendación sale del **catálogo real de Firestore** (solo productos activos):
+  para cada producto elige el tamaño que alcanza para las personas (o varias cajas),
+  el sabor y el relleno pedidos, y lo puntúa por presupuesto, sabores, ocasión
+  (tortas para cumpleaños, cajas de galletas o rollos para reuniones…), calificación y stock. La tarjeta
+  muestra la personalización, los motivos y el precio total.
+- **Agregar al carrito** agrega la personalización recomendada; **Personalizar** abre
+  el detalle con esa selección ya marcada. El pedido queda con origen `ia`.
+- **Personalizar con IA** (detalle del producto, mockup 03) abre el asistente
+  enfocado en ese producto.
+
+**Panel IA del administrador (mockup admin 04)** — `admin_assistant_screen.dart`, `assistant_stats.dart`
+- Conversaciones hoy, tasa de conversión a pedido, tiempo medio hasta la
+  recomendación y producto más recomendado, en vivo.
+- Conversaciones recientes: cliente, ocasión, personas, presupuesto, recomendación y
+  resultado (**En chat**, **Compró**, **Sin compra**), con «Ver todas».
+- Comportamiento del asistente, guardado en `config/asistente` y aplicado al instante:
+  **Asistente activo**, **Sugerir personalización** (decoración floral y consejos
+  según la ocasión), **Presupuesto mínimo** (no recomienda nada por debajo) y
+  **Notificar pedidos vía IA** (el aviso en vivo del admin).
+
+**Registro de conversaciones** — `firebase_services.dart`, `firestore.rules`
+- Cuando el asistente recomienda, se crea un documento en `conversaciones`. Si el
+  cliente compra, pasa a `compro` con el id del pedido; si sale sin agregar nada al
+  carrito, a `sin_compra`.
+
+**Pulido**
+- Ya no queda ningún «próximamente»: el botón central, la tarjeta del Inicio,
+  «Personalizar con IA» y la pestaña IA del admin funcionan.
+- La tarjeta «Pedidos vía Asistente IA» del Panel general cuenta los pedidos reales.
+- `flutter analyze` sin avisos; 23 pruebas (10 nuevas del asistente).
+
 ## Qué incluye la entrega 3
 
 **Inicio del cliente (mockup 01)** — `home_screen.dart`
 - Saludo según la hora, buscador y categorías (llevan a Explorar ya filtrado),
   «Destacados de la semana» (los mejor calificados), «Tus favoritos» y la tarjeta
-  del asistente (la IA llega en la entrega 4). La app del cliente abre aquí.
+  del asistente (desde la entrega 4 abre el chat). La app del cliente abre aquí.
 
 **Favoritos en la cuenta** — `catalog_controller.dart`, `auth_gate.dart`
 - Se guardan en `usuarios/{uid}.favoritos` con `arrayUnion` / `arrayRemove`.
@@ -121,7 +190,7 @@ Las pruebas usan los servicios en memoria, así que no necesitan Firebase.
 **Panel general (mockup admin 01)** — `admin_dashboard_screen.dart`, `dashboard_stats.dart`
 - Ventas de hoy (con variación frente a ayer), pedidos pendientes (al tocarla abre
   Pedidos filtrado), entregados esta semana (frente a la semana pasada) y pedidos vía
-  asistente (en cero hasta la entrega 4).
+  asistente (se llena desde la entrega 4).
 - Gráfico de ventas de lunes a domingo: el día con más ventas muestra su valor y al
   tocar cualquier barra se ve el suyo. Más vendidos de la semana con unidades y dinero.
 - Todo se calcula con los pedidos reales que ya escucha la gestión de pedidos, así que
@@ -181,6 +250,15 @@ productos/{id}            (id legible en los de ejemplo, automático en los nuev
   calificacion, resenas, sinConservantes, ilustracion, activo, stock, orden,
   opciones: [{ id, titulo, predeterminada, opciones: [{ nombre, extra }] }]
 
+conversaciones/{id}       (entrega 4)
+  clienteId, clienteNombre, ocasion, ocasionTexto, personas,
+  presupuestoMin, presupuestoMax, sabores: [texto],
+  productoId, productoNombre, precio, segundos,
+  resultado ("en_chat" | "compro" | "sin_compra"), pedidoId, creado, actualizado
+
+config/asistente          (entrega 4)
+  activo, sugerirPersonalizacion, presupuestoMinimo, notificarPedidos
+
 pedidos/{id}
   clienteId, clienteNombre, clienteTelefono,
   items: [{ productoId, nombre, ilustracion, opciones, precioUnitario, cantidad }],
@@ -198,7 +276,7 @@ Decisiones:
   no la del celular.
 - Las consultas no combinan filtros con orden (el orden se hace en el dispositivo),
   por eso **no hace falta crear índices compuestos**.
-- `origen` ya existe para que la entrega 4 marque los pedidos hechos desde el asistente.
+- `origen` es `ia` cuando algún producto del carrito lo agregó el asistente.
   Los pedidos manuales tienen `clienteId` del admin (lo exigen las reglas) y el nombre
   y teléfono del cliente real en `clienteNombre` y `clienteTelefono`.
 
@@ -214,6 +292,7 @@ lib/
     theme.dart
   models/
     app_user.dart
+    assistant.dart               (nuevo, entrega 4)
     order.dart
     product.dart
   data/
@@ -227,6 +306,9 @@ lib/
     cart_controller.dart
     admin_orders_controller.dart
     dashboard_stats.dart         (nuevo, entrega 3)
+    assistant_engine.dart        (nuevo, entrega 4)
+    assistant_controller.dart    (nuevo, entrega 4)
+    assistant_stats.dart         (nuevo, entrega 4)
   widgets/
     keki_nav.dart
     order_widgets.dart
@@ -238,6 +320,7 @@ lib/
     login_screen.dart
     home_shell.dart
     home_screen.dart             (nuevo, entrega 3)
+    assistant_screen.dart        (nuevo, entrega 4)
     explore_screen.dart
     product_detail_screen.dart
     cart_screen.dart
@@ -250,9 +333,12 @@ lib/
       admin_products_screen.dart  (nuevo, entrega 3)
       product_form_screen.dart    (nuevo, entrega 3)
       new_order_screen.dart       (nuevo, entrega 3)
+      admin_assistant_screen.dart (nuevo, entrega 4)
 firestore.rules
+firebase.json, .firebaserc      (para «firebase deploy --only firestore:rules»)
 test/
   widget_test.dart
+  assistant_test.dart            (nuevo, entrega 4)
 ```
 
 ### Inicio y configuración
@@ -275,6 +361,9 @@ test/
   `stock`, `sortOrder` (campo `orden`) y `lowStock` (5 unidades o menos).
 - **`lib/models/app_user.dart`**: `UserRole` (cliente/admin) y `AppUser`, el perfil
   guardado en `usuarios`. `isAdmin` decide la interfaz y `favorites` guarda los favoritos.
+- **`lib/models/assistant.dart`**: `Occasion` (ocasiones y sus palabras clave),
+  `AssistantSettings` (documento `config/asistente`), `ConversationResult` y
+  `Conversation` (documento de `conversaciones`).
 - **`lib/models/order.dart`**: `OrderStatus` (con `next` para el siguiente paso del
   flujo, `isOpen`, `canCancel` y `stockSignTo`, que dice si un cambio de estado descuenta
   o devuelve stock), `DeliveryMode`, `OrderOrigin` (catálogo, IA o manual), `OrderItem` y `Order`.
@@ -292,9 +381,13 @@ test/
   escucha con `snapshots()` y cambia su estado en una transacción que también ajusta
   el stock. `FirestoreUserRepository` guarda los favoritos. `_plain` convierte los `Timestamp`
   en `DateTime` para que los modelos no dependan de Firebase.
+- `FirestoreAssistantRepository` (también en `firebase_services.dart`) escucha
+  `config/asistente`, registra conversaciones y actualiza su resultado.
 - **`lib/data/memory_services.dart`**: las mismas operaciones en memoria, con las
   cuentas demo. Se usan en las pruebas y en el modo demo.
-- **`lib/data/products_data.dart`**: los 7 productos de ejemplo. Ahora solo sirven
+- **`lib/data/products_data.dart`**: los 9 productos reales de la pastelería
+  (`kProducts`) y los ids del catálogo de ejemplo anterior (`kLegacySampleIds`),
+  que «Restablecer catálogo» borra. Sirven
   para la carga inicial a Firestore (y para el modo demo).
 
 ### Estado de la aplicación
@@ -314,6 +407,15 @@ test/
 - **`lib/state/admin_orders_controller.dart`**: escucha todos los pedidos, filtra por
   estado, cuenta pedidos por estado y llama a `onNewOrder` con cada pedido que llega
   después de la primera carga (el aviso en vivo). También alimenta el Panel general.
+- **`lib/state/assistant_engine.dart`**: el «cerebro» del asistente, sin interfaz.
+  `parseMessage` (con `parseOccasion`, `parsePeople`, `parseBudget` y `parseFlavors`)
+  convierte un mensaje en un `AssistantBrief`; `recommend` arma y puntúa cada producto
+  del catálogo y devuelve las `Recommendation` ordenadas.
+- **`lib/state/assistant_controller.dart`**: la conversación: mensajes, pregunta
+  pendiente, respuestas rápidas, «otra opción», «empezar de nuevo» y el registro en
+  `conversaciones` (incluido «Sin compra» al salir).
+- **`lib/state/assistant_stats.dart`**: cifras de la pestaña IA a partir de las
+  conversaciones.
 - **`lib/state/dashboard_stats.dart`**: `DashboardStats.from(pedidos)` calcula, sin
   tocar la interfaz, las ventas de hoy y ayer, pendientes, entregados de esta semana y
   la anterior, pedidos vía IA, ventas por día y los más vendidos (`TopProduct`).
@@ -337,6 +439,8 @@ test/
   se abre sola y explica qué falta). `CartItemTile`, `DeliveryCard` y `CartSummary`
   se reutilizan en el pedido manual del admin.
 - **`lib/screens/profile_screen.dart`**: cuenta del cliente y «Mis pedidos» en vivo.
+- **`lib/screens/assistant_screen.dart`**: chat del asistente (mockup 04) y
+  `openAssistant`, que lo abre desde el botón central, el Inicio o el detalle.
 - **`lib/screens/order_detail_screen.dart`**: detalle de un pedido en vivo. Para el
   admin añade la barra con «Marcar como …» y «Cancelar».
 - **`lib/screens/admin/admin_shell.dart`**: pestañas del admin (Inicio, Pedidos,
@@ -347,6 +451,7 @@ test/
   y la opción «Restablecer catálogo de ejemplo».
 - **`lib/screens/admin/product_form_screen.dart`**: crear o editar un producto y sus opciones.
 - **`lib/screens/admin/new_order_screen.dart`**: pedido manual del admin.
+- **`lib/screens/admin/admin_assistant_screen.dart`**: pestaña IA (mockup admin 04).
 
 ### Componentes visuales y utilidades
 
@@ -365,6 +470,11 @@ test/
   y cancelar, favoritos guardados en la cuenta, el recorrido de Inicio y Explorar, el
   login por rol, el recorrido cliente → admin, la creación y desactivación de un
   producto y el pedido manual del admin.
+- **`test/assistant_test.dart`**: cómo entiende el asistente ocasión, personas,
+  presupuesto y sabores; que recomiende la torta del mockup; el presupuesto mínimo;
+  el registro de la conversación; las cifras del panel IA; el recorrido completo
+  cliente → pedido vía IA → pestaña IA del admin; el asistente apagado y
+  «Personalizar con IA».
 
 ## Flujo de la aplicación
 
@@ -377,6 +487,10 @@ test/
 5. **Admin:** `AdminOrdersController` escucha `pedidos` con `snapshots()`; cada cambio
    en la base de datos actualiza la lista. En el detalle, «Marcar como …» actualiza
    `estado` y el cliente lo ve al instante.
+6. **Asistente:** el chat usa `AssistantController`, que entiende cada mensaje con
+   `assistant_engine.dart` y recomienda con el catálogo que ya escucha
+   `CatalogController`. La recomendación se registra en `conversaciones`; si termina en
+   pedido, el pedido lleva `origen: "ia"` y la conversación pasa a `compro`.
 
 **Gestión de estado:** igual que en la entrega 1, `ChangeNotifier` + `ListenableBuilder`
 y `AppScope` (sin el paquete `provider`). Los datos remotos llegan como `Stream` y
@@ -396,11 +510,36 @@ los controladores los convierten en estado para la interfaz.
   quedan como trabajo futuro.
 - Las notificaciones de pedidos nuevos solo se ven con la app del admin abierta
   (no son notificaciones push).
+- El asistente entiende español con reglas y palabras clave, y recomienda con un
+  puntaje calculado en el celular. No llama a un modelo de lenguaje externo: para eso
+  haría falta guardar una clave de API, y en una app móvil cualquiera podría sacarla
+  del instalable; lo correcto sería una Cloud Function (fuera del alcance del curso).
+  A cambio funciona sin conexión, gratis, al instante y es fácil de probar.
+- «Tiempo medio» en el panel IA es lo que tarda el cliente desde que abre el chat hasta
+  recibir la recomendación (el asistente responde al instante).
 
 ## Datos de ejemplo
 
-- Nombres, precios base y calificaciones de los 7 productos salen de los mockups.
-- Los **recargos por opción** (p. ej. tamaño 20 pers. +$15.000), el domicilio de $6.000
-  y las franjas horarias son valores de muestra: se editan en
-  `lib/data/products_data.dart` y `lib/state/cart_controller.dart`.
+- **Catálogo real** (lista «Precios · Sabores clásicos»): 6 tortas por tamaño
+  (Minicake, 10-12, 18-20 y 28-30 personas):
+
+  | Sabor | Minicake | 10-12 | 18-20 | 28-30 |
+  |---|---|---|---|---|
+  | Vainilla, Naranja, Red velvet | $15.000 | $35.000 | $55.000 | $75.000 |
+  | Chocolate, Frutas, Tres leches | $17.000 | $37.000 | $58.000 | $79.000 |
+
+  Además: galletas con chips de chocolate (caja x6 $10.000, x12 $20.000, x24 $40.000),
+  cupcakes (x6 $21.000, x12 $42.000) y rollos de canela (x4 $12.000, x8 $24.000). Las
+  cajas grandes mantienen el precio por unidad de la caja pequeña.
+- Las **tortas aparecen elegidas en 10-12 personas**; para el asistente, el Minicake
+  alcanza para unas 4 personas.
+- Las **descripciones**, el **stock inicial** y que todos los productos salgan como
+  «Nuevo» (sin calificación) son valores provisionales; se cambian desde
+  **Productos** en la app o en `lib/data/products_data.dart`.
+- El domicilio de $6.000 y las franjas horarias son valores de muestra en
+  `lib/state/cart_controller.dart`.
+- **Al actualizar desde la versión anterior:** como admin, usa **Productos › ⋮ ›
+  Restablecer catálogo de ejemplo**. Sube los 9 productos y borra los 6 de ejemplo
+  viejos (fresa silvestre, brownie, etc.); los productos que hayas creado tú se
+  conservan.
 - Los mockups usan la fuente Poppins; aquí se usa la fuente por defecto. Se puede añadir con `google_fonts`.

@@ -7,6 +7,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show debugPrint;
 
 import '../models/app_user.dart';
+import '../models/assistant.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 import 'services.dart';
@@ -19,6 +20,7 @@ AppServices firebaseServices() {
     users: FirestoreUserRepository(db),
     products: FirestoreProductRepository(db),
     orders: FirestoreOrderRepository(db),
+    assistant: FirestoreAssistantRepository(db),
   );
 }
 
@@ -213,8 +215,14 @@ class FirestoreProductRepository implements ProductRepository {
 
   /// Escribe todos los productos en un solo lote, usando su id como clave.
   @override
-  Future<void> seed(List<Product> products) async {
+  Future<void> seed(List<Product> products,
+      {List<String> remove = const []}) async {
     final batch = _db.batch();
+    // Borrar y escribir en el mismo lote: o se aplica todo o nada, también
+    // si la conexión se corta a mitad de camino.
+    for (final id in remove) {
+      batch.delete(_col.doc(id));
+    }
     for (var i = 0; i < products.length; i++) {
       batch.set(_col.doc(products[i].id), products[i].toMap(order: i));
     }
@@ -342,4 +350,74 @@ class FirestoreOrderRepository implements OrderRepository {
       });
     });
   }
+}
+
+/// Ajustes en `config/asistente` y conversaciones en `conversaciones`.
+class FirestoreAssistantRepository implements AssistantRepository {
+  /// Crea el repositorio sobre la base de datos [_db].
+  FirestoreAssistantRepository(this._db);
+
+  final FirebaseFirestore _db;
+
+  DocumentReference<Map<String, dynamic>> get _settingsDoc =>
+      _db.collection('config').doc('asistente');
+
+  CollectionReference<Map<String, dynamic>> get _col =>
+      _db.collection('conversaciones');
+
+  @override
+  Stream<AssistantSettings> watchSettings() => _settingsDoc
+      .snapshots()
+      .map((doc) => AssistantSettings.fromMap(doc.data()));
+
+  @override
+  Future<void> saveSettings(AssistantSettings settings) =>
+      _settingsDoc.set(settings.toMap());
+
+  /// Igual que los pedidos: sin conexión no se espera al servidor, la
+  /// escritura queda en la cola de Firestore.
+  @override
+  Future<String> logConversation(Conversation conversation) async {
+    final ref = _col.doc();
+    final write = ref.set({
+      ...conversation.toMap(),
+      'creado': FieldValue.serverTimestamp(),
+      'actualizado': FieldValue.serverTimestamp(),
+    });
+    unawaited(write.catchError((Object e) {
+      debugPrint('Keki: no se pudo registrar la conversación: $e');
+    }));
+    return ref.id;
+  }
+
+  @override
+  Future<void> updateConversation(
+    String id, {
+    ConversationResult? result,
+    String? orderId,
+    String? productId,
+    String? productName,
+    int? price,
+  }) async {
+    final write = _col.doc(id).update({
+      if (result != null) 'resultado': result.key,
+      if (orderId != null) 'pedidoId': orderId,
+      if (productId != null) 'productoId': productId,
+      if (productName != null) 'productoNombre': productName,
+      if (price != null) 'precio': price,
+      'actualizado': FieldValue.serverTimestamp(),
+    });
+    unawaited(write.catchError((Object e) {
+      debugPrint('Keki: no se pudo actualizar la conversación $id: $e');
+    }));
+  }
+
+  @override
+  Stream<List<Conversation>> watchConversations() => _col
+      .orderBy('creado', descending: true)
+      .limit(200)
+      .snapshots()
+      .map((snap) => [
+            for (final d in snap.docs) Conversation.fromMap(d.id, _dataOf(d)),
+          ]);
 }

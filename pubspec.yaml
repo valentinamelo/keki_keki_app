@@ -23,3 +23,8 @@ dev_dependencies:
 flutter:
   # Habilita los iconos de Material usados por las pantallas.
   uses-material-design: true
+
+  # Fotos de los productos (versiones livianas; los originales están en
+  # fotos_originales/, que no se incluye en la app).
+  assets:
+    - assets/productos/

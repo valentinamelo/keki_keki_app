@@ -2,6 +2,7 @@
 // no de Firebase directamente; así las pruebas usan versiones en memoria.
 
 import '../models/app_user.dart';
+import '../models/assistant.dart';
 import '../models/order.dart';
 import '../models/product.dart';
 
@@ -49,8 +50,9 @@ abstract class ProductRepository {
   /// productos desactivados por el administrador.
   Stream<List<Product>> watchProducts({bool onlyActive = true});
 
-  /// Guarda [products] en la base de datos (carga del catálogo inicial).
-  Future<void> seed(List<Product> products);
+  /// Guarda [products] en la base de datos (carga del catálogo inicial) y
+  /// borra los productos [remove], todo en una sola operación.
+  Future<void> seed(List<Product> products, {List<String> remove = const []});
 
   /// Crea el producto si su id está vacío o lo reemplaza si ya existe.
   /// Devuelve el id con el que quedó guardado.
@@ -83,6 +85,34 @@ abstract class OrderRepository {
   Future<void> updateStatus(String id, OrderStatus status);
 }
 
+/// Ajustes del asistente (`config/asistente`) y registro de sus
+/// conversaciones (`conversaciones`).
+abstract class AssistantRepository {
+  /// Emite los ajustes cada vez que el administrador los cambia. Si el
+  /// documento no existe se emiten los valores por defecto.
+  Stream<AssistantSettings> watchSettings();
+
+  /// Guarda los ajustes (solo administradores).
+  Future<void> saveSettings(AssistantSettings settings);
+
+  /// Registra una conversación que llegó a una recomendación y devuelve su id.
+  Future<String> logConversation(Conversation conversation);
+
+  /// Actualiza el resultado de la conversación [id] y, si se indican, el
+  /// pedido creado y el último producto recomendado.
+  Future<void> updateConversation(
+    String id, {
+    ConversationResult? result,
+    String? orderId,
+    String? productId,
+    String? productName,
+    int? price,
+  });
+
+  /// Conversaciones recientes, de la más nueva a la más antigua (admin).
+  Stream<List<Conversation>> watchConversations();
+}
+
 /// Agrupa los servicios que usa la aplicación.
 class AppServices {
   /// Crea el grupo de servicios con sus implementaciones concretas.
@@ -91,12 +121,14 @@ class AppServices {
     required this.users,
     required this.products,
     required this.orders,
+    required this.assistant,
   });
 
   final AuthService auth;
   final UserRepository users;
   final ProductRepository products;
   final OrderRepository orders;
+  final AssistantRepository assistant;
 }
 
 /// Unidades por producto de [order], para ajustar el stock.

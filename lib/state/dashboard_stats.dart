@@ -10,6 +10,7 @@ class TopProduct {
     required this.productId,
     required this.name,
     required this.art,
+    this.image,
     required this.units,
     required this.revenue,
   });
@@ -17,6 +18,7 @@ class TopProduct {
   final String productId;
   final String name;
   final ArtKind art;
+  final String? image;
   final int units;
   final int revenue;
 }
@@ -80,6 +82,7 @@ class DashboardStats {
           productId: item.productId,
           name: item.name,
           art: item.art,
+          image: item.image,
           units: (prev?.units ?? 0) + item.quantity,
           revenue: (prev?.revenue ?? 0) + item.subtotal,
         );
@@ -114,7 +117,7 @@ class DashboardStats {
   final int deliveredThisWeek;
   final int deliveredLastWeek;
 
-  /// Pedidos hechos desde el asistente esta semana (llega en la entrega 4).
+  /// Pedidos hechos desde el asistente esta semana.
   final int aiOrdersThisWeek;
 
   /// Ventas (COP) de lunes a domingo de la semana actual.

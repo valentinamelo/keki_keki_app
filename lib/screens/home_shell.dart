@@ -2,16 +2,16 @@
 
 import 'package:flutter/material.dart';
 
-import '../core/snack.dart';
 import '../state/app_scope.dart';
 import '../widgets/keki_nav.dart';
+import 'assistant_screen.dart';
 import 'cart_screen.dart';
 import 'explore_screen.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 
 /// Contenedor con la barra inferior del mockup: Inicio, Explorar, Carrito y
-/// Perfil. El botón central del asistente llega en la entrega 4.
+/// Perfil, con el botón central que abre el Asistente Keki IA.
 class HomeShell extends StatefulWidget {
   /// Crea el contenedor principal de las pestañas.
   const HomeShell({super.key});
@@ -61,8 +61,7 @@ class _HomeShellState extends State<HomeShell> {
             const NavEntry(Icons.person_outline_rounded, 'Perfil'),
           ],
           onSelect: (i) => setState(() => _tab = i),
-          onFab: () =>
-              showKekiSnack(context, 'Asistente Keki IA: próximamente'),
+          onFab: () => openAssistant(context),
         ),
       ),
     );

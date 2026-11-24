@@ -1,161 +1,202 @@
-// Catálogo de productos de demostración y constructores de sus opciones.
+// Catálogo real de Keki Keki para la carga inicial de Firestore (y para el
+// modo demo y las pruebas).
 
 import '../models/product.dart';
 
 // ---------------------------------------------------------------------------
-// Datos de ejemplo para la carga inicial del catálogo. Nombres, precios base,
-// calificaciones y parte del stock salen de los mockups; los recargos de cada
-// opción y el resto del stock son valores de muestra.
+// Precios tomados de la lista «Precios · Sabores clásicos» de la pastelería.
+// Las cajas grandes de galletas, cupcakes y rollos cuestan lo mismo por unidad
+// que la caja pequeña. El stock inicial es un valor de ejemplo: el admin lo
+// ajusta desde Productos.
 // ---------------------------------------------------------------------------
 
-/// Tamaños de torta. [basePersons] es el tamaño al que corresponde el precio
-/// base; los demás se ajustan con una tabla de recargos de ejemplo.
-OptionGroup _tamanos(int basePersons) {
-  const persons = [10, 15, 20, 30];
-  const table = {10: 0, 15: 10000, 20: 25000, 30: 45000};
+/// Tamaños de torta con los precios de la lista: [prices] son los valores de
+/// Minicake, 10-12, 18-20 y 28-30 personas. El precio base es el del Minicake
+/// y la torta viene elegida en 10-12 personas.
+OptionGroup _tamanos(List<int> prices) {
+  const labels = ['Minicake', '10-12 pers.', '18-20 pers.', '28-30 pers.'];
   return OptionGroup(
     id: 'tamano',
     title: 'Tamaño',
-    defaultIndex: persons.indexOf(basePersons),
+    defaultIndex: 1,
     choices: [
-      for (final p in persons)
-        OptionChoice('$p pers.', extra: table[p]! - table[basePersons]!),
+      for (var i = 0; i < labels.length; i++)
+        OptionChoice(labels[i], extra: prices[i] - prices[0]),
     ],
   );
 }
 
-/// Crea las opciones de sabor usando [defaultIndex] como selección inicial.
-OptionGroup _sabores({int defaultIndex = 0}) => OptionGroup(
-      id: 'sabor',
-      title: 'Sabor',
-      defaultIndex: defaultIndex,
-      choices: const [
-        OptionChoice('Vainilla'),
-        OptionChoice('Chocolate'),
-        OptionChoice('Red velvet'),
-      ],
-    );
+/// Precios de los sabores clásicos: vainilla, naranja y red velvet.
+const _clasicos = [15000, 35000, 55000, 75000];
 
-/// Crea las opciones de relleno y decoración de una torta.
-OptionGroup _rellenos() => const OptionGroup(
-      id: 'relleno',
-      title: 'Relleno & decoración',
-      choices: [
-        OptionChoice('Frutos rojos'),
-        OptionChoice('Arequipe', extra: 3000),
-        OptionChoice('Flores naturales', extra: 4000),
-      ],
-    );
+/// Precios de chocolate, frutas, tres leches y zanahoria.
+const _especiales = [17000, 37000, 58000, 79000];
 
-/// Crea una opción de presentación con las alternativas recibidas.
-OptionGroup _presentacion(List<OptionChoice> choices) => OptionGroup(
+/// Cajas de [unit] unidades y sus múltiplos ([sizes]), al mismo precio por
+/// unidad que la caja más pequeña ([unitPrice] es el valor de esa caja).
+OptionGroup _cajas(int unit, int unitPrice, List<int> sizes) => OptionGroup(
       id: 'presentacion',
       title: 'Presentación',
-      choices: choices,
+      choices: [
+        for (final n in sizes)
+          OptionChoice('Caja x$n', extra: unitPrice * (n ~/ unit) - unitPrice),
+      ],
     );
 
-/// Productos de muestra que alimentan el catálogo al iniciar la aplicación.
+/// Ruta de la foto de un producto dentro de `assets/productos/`.
+String _foto(String name) => 'assets/productos/$name.jpg';
+
+/// Fotos incluidas en la app; el admin las elige al crear o editar productos.
+final List<String> kProductImages = [
+  for (final n in const [
+    'torta-chocolate',
+    'torta-vainilla',
+    'torta-tres-leches',
+    'torta-frutas',
+    'torta-naranja',
+    'torta-red-velvet',
+    'torta-zanahoria',
+    'galletas-chips-chocolate',
+    'cupcakes',
+    'rollos-canela',
+  ])
+    _foto(n),
+];
+
+/// Productos que la app sube a la colección `productos` («Cargar catálogo de
+/// ejemplo» en la pestaña Productos del admin).
 final List<Product> kProducts = [
   Product(
-    id: 'torta-fresa-silvestre',
-    name: 'Torta fresa silvestre',
+    id: 'torta-chocolate',
+    image: _foto('torta-chocolate'),
+    name: 'Torta de chocolate',
     category: ProductCategory.tortas,
     description:
-        'Bizcocho esponjoso con fresas silvestres y crema chantillí, decorado a mano.',
-    basePrice: 72000,
-    rating: 4.9,
-    art: ArtKind.strawberryCake,
-    options: [_tamanos(15), _sabores(), _rellenos()],
-    stock: 12,
+        'Bizcocho húmedo de chocolate con cobertura de chocolate. Hecha por encargo.',
+    basePrice: _especiales[0],
+    art: ArtKind.chocolateCake,
+    options: [_tamanos(_especiales)],
+    stock: 10,
   ),
   Product(
-    id: 'brownie-doble-cacao',
-    name: 'Brownie doble cacao',
-    category: ProductCategory.brownies,
+    id: 'torta-vainilla',
+    image: _foto('torta-vainilla'),
+    name: 'Torta de vainilla',
+    category: ProductCategory.tortas,
     description:
-        'Brownies húmedos de doble chocolate, con centro suave y borde crocante.',
-    basePrice: 18000,
-    rating: 4.7,
-    art: ArtKind.brownie,
-    options: [
-      _presentacion(const [
-        OptionChoice('Caja x4'),
-        OptionChoice('Caja x8', extra: 16000),
-      ]),
-    ],
-    stock: 26,
+        'Bizcocho suave de vainilla, el sabor clásico. Hecha por encargo.',
+    basePrice: _clasicos[0],
+    art: ArtKind.blueCake,
+    options: [_tamanos(_clasicos)],
+    stock: 10,
   ),
   Product(
-    id: 'cupcakes-duo-pastel',
-    name: 'Cupcakes duo pastel',
-    category: ProductCategory.cupcakes,
-    description: 'Cupcakes de vainilla con crema en tonos azul y rosa pastel.',
-    basePrice: 22000,
-    rating: 4.5,
-    art: ArtKind.cupcakes,
-    options: [
-      _presentacion(const [
-        OptionChoice('Caja x6'),
-        OptionChoice('Caja x12', extra: 20000),
-      ]),
-    ],
-    stock: 40,
+    id: 'torta-tres-leches',
+    image: _foto('torta-tres-leches'),
+    name: 'Torta tres leches',
+    category: ProductCategory.tortas,
+    description:
+        'Bizcocho bañado en tres leches, cremoso y fresco. Hecha por encargo.',
+    basePrice: _especiales[0],
+    art: ArtKind.creamCake,
+    options: [_tamanos(_especiales)],
+    stock: 10,
   ),
   Product(
-    id: 'galletas-mantequilla',
-    name: 'Galletas de mantequilla',
+    id: 'torta-frutas',
+    image: _foto('torta-frutas'),
+    name: 'Torta con frutas',
+    category: ProductCategory.tortas,
+    description: 'Bizcocho con frutas frescas y crema. Hecha por encargo.',
+    basePrice: _especiales[0],
+    art: ArtKind.strawberryCake,
+    options: [_tamanos(_especiales)],
+    stock: 10,
+  ),
+  Product(
+    id: 'torta-naranja',
+    image: _foto('torta-naranja'),
+    name: 'Torta de naranja',
+    category: ProductCategory.tortas,
+    description:
+        'Bizcocho de naranja con un toque cítrico y aromático. Hecha por encargo.',
+    basePrice: _clasicos[0],
+    art: ArtKind.orangeCake,
+    options: [_tamanos(_clasicos)],
+    stock: 10,
+  ),
+  Product(
+    id: 'torta-red-velvet',
+    image: _foto('torta-red-velvet'),
+    name: 'Torta red velvet',
+    category: ProductCategory.tortas,
+    description:
+        'Bizcocho red velvet de color intenso con crema. Hecha por encargo.',
+    basePrice: _clasicos[0],
+    art: ArtKind.roseCake,
+    options: [_tamanos(_clasicos)],
+    stock: 10,
+  ),
+  Product(
+    id: 'torta-zanahoria',
+    image: _foto('torta-zanahoria'),
+    name: 'Torta de zanahoria',
+    category: ProductCategory.tortas,
+    description: 'Bizcocho de zanahoria especiado y húmedo. Hecha por encargo.',
+    basePrice: _especiales[0],
+    art: ArtKind.orangeCake,
+    options: [_tamanos(_especiales)],
+    stock: 10,
+  ),
+  Product(
+    id: 'galletas-chips-chocolate',
+    image: _foto('galletas-chips-chocolate'),
+    name: 'Galletas con chips de chocolate',
     category: ProductCategory.galletas,
     description:
-        'Galletas artesanales de mantequilla, crocantes por fuera y suaves por dentro.',
-    basePrice: 15000,
-    rating: 4.6,
+        'Galletas con chips de chocolate, crocantes por fuera y suaves por dentro.',
+    basePrice: 10000,
     art: ArtKind.cookies,
     options: [
-      _presentacion(const [
-        OptionChoice('Caja x6'),
-        OptionChoice('Caja x12', extra: 13000),
-      ]),
+      _cajas(6, 10000, const [6, 12, 24])
     ],
     stock: 30,
   ),
   Product(
-    id: 'torta-rosa-frutos',
-    name: 'Torta rosa de frutos',
-    detailName: 'Torta Rosa de Frutos Silvestres',
-    category: ProductCategory.tortas,
-    description:
-        'Bizcocho de vainilla húmedo relleno de frutos rojos frescos y crema chantillí. '
-        'Decoración artesanal con flores comestibles.',
-    highlight: 'Elaborada el mismo día de tu pedido.',
-    basePrice: 65000,
-    rating: 4.8,
-    reviewCount: 212,
-    noPreservatives: true,
-    art: ArtKind.roseCake,
-    options: [_tamanos(15), _sabores(), _rellenos()],
-    stock: 18,
+    id: 'cupcakes',
+    image: _foto('cupcakes'),
+    name: 'Cupcakes',
+    category: ProductCategory.cupcakes,
+    description: 'Cupcakes esponjosos decorados con crema.',
+    basePrice: 21000,
+    art: ArtKind.cupcakes,
+    options: [
+      _cajas(6, 21000, const [6, 12])
+    ],
+    stock: 20,
   ),
   Product(
-    id: 'torta-azul-vainilla',
-    name: 'Torta azul vainilla',
-    category: ProductCategory.tortas,
-    description:
-        'Bizcocho de vainilla suave con cobertura de crema azul pastel.',
-    basePrice: 58000,
-    rating: 4.6,
-    art: ArtKind.blueCake,
-    options: [_tamanos(15), _sabores(), _rellenos()],
-    stock: 3,
+    id: 'rollos-canela',
+    image: _foto('rollos-canela'),
+    name: 'Rollos de canela',
+    category: ProductCategory.rollos,
+    description: 'Rollos de canela suaves y aromáticos, con glaseado.',
+    basePrice: 12000,
+    art: ArtKind.cinnamonRoll,
+    options: [
+      _cajas(4, 12000, const [4, 8])
+    ],
+    stock: 20,
   ),
-  Product(
-    id: 'torta-chocolate',
-    name: 'Torta de chocolate',
-    category: ProductCategory.tortas,
-    description:
-        'Bizcocho de chocolate relleno de frutos rojos, con decoración floral.',
-    basePrice: 78000,
-    art: ArtKind.chocolateCake,
-    options: [_tamanos(20), _sabores(defaultIndex: 1), _rellenos()],
-    stock: 8,
-  ),
+];
+
+/// Ids del catálogo de ejemplo anterior (entregas 1 a 4). «Restablecer
+/// catálogo» los borra para que no queden mezclados con los productos reales.
+const List<String> kLegacySampleIds = [
+  'torta-fresa-silvestre',
+  'brownie-doble-cacao',
+  'cupcakes-duo-pastel',
+  'galletas-mantequilla',
+  'torta-rosa-frutos',
+  'torta-azul-vainilla',
 ];

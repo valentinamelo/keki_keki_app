@@ -10,16 +10,31 @@ import '../models/product.dart';
 import '../state/app_scope.dart';
 import '../widgets/product_art.dart';
 import '../widgets/product_widgets.dart';
+import 'assistant_screen.dart';
 
 /// Módulo Producto (mockup 03 — Detalle / Personalización).
 class ProductDetailScreen extends StatefulWidget {
   /// Crea el detalle para el [product] recibido desde el catálogo. Con
   /// [onAdd] la selección se entrega a quien abrió la pantalla (el pedido
   /// manual del admin) en lugar de ir al carrito, y la pantalla se cierra.
-  const ProductDetailScreen({super.key, required this.product, this.onAdd});
+  ///
+  /// Desde el asistente llegan [initialSelection] e [initialQuantity] (la
+  /// personalización recomendada) y [conversationId], para que el pedido
+  /// quede registrado como venta del asistente.
+  const ProductDetailScreen({
+    super.key,
+    required this.product,
+    this.onAdd,
+    this.initialSelection,
+    this.initialQuantity = 1,
+    this.conversationId,
+  });
 
   final Product product;
   final void Function(Map<String, int> selection, int quantity)? onAdd;
+  final Map<String, int>? initialSelection;
+  final int initialQuantity;
+  final String? conversationId;
 
   /// Crea el estado que guarda las opciones elegidas y la cantidad.
   @override
@@ -30,9 +45,9 @@ class ProductDetailScreen extends StatefulWidget {
 class _ProductDetailScreenState extends State<ProductDetailScreen> {
   static const int _maxQty = 20;
 
-  late final Map<String, int> _selection =
-      Map<String, int>.of(widget.product.defaultSelection);
-  int _qty = 1;
+  late final Map<String, int> _selection = Map<String, int>.of(
+      widget.initialSelection ?? widget.product.defaultSelection);
+  late int _qty = widget.initialQuantity.clamp(1, _maxQty);
 
   /// Agrega la configuración actual al carrito y confirma la acción.
   void _addToCart() {
@@ -42,7 +57,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       Navigator.of(context).pop();
       return;
     }
-    AppScope.of(context).cart.add(widget.product, _selection, quantity: _qty);
+    AppScope.of(context).cart.add(
+          widget.product,
+          _selection,
+          quantity: _qty,
+          conversationId: widget.conversationId,
+        );
     showKekiSnack(context, '${widget.product.name} agregado al carrito');
   }
 
@@ -78,7 +98,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 height: artHeight,
                 child: Hero(
                   tag: artHeroTag(product.id),
-                  child: ProductArt(kind: product.art),
+                  child: ProductArt(kind: product.art, image: product.image),
                 ),
               ),
               Positioned.fill(
@@ -251,35 +271,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               ],
             ),
           ],
-          const SizedBox(height: 16),
-          Material(
-            color: KekiColors.pinkTint,
-            borderRadius: BorderRadius.circular(16),
-            clipBehavior: Clip.antiAlias,
-            child: InkWell(
-              onTap: () =>
-                  showKekiSnack(context, 'Personalizar con IA: próximamente'),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  children: [
-                    Icon(Icons.auto_awesome,
-                        size: 18, color: KekiColors.pinkDeep),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        'Personalizar con IA',
-                        style: TextStyle(
-                            fontSize: 12.5, fontWeight: FontWeight.w600),
+          // El acceso al asistente no aparece en el pedido manual del admin
+          // ni si ya se llegó aquí desde el asistente.
+          if (widget.onAdd == null && widget.conversationId == null) ...[
+            const SizedBox(height: 16),
+            Material(
+              color: KekiColors.pinkTint,
+              borderRadius: BorderRadius.circular(16),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () => openAssistant(context, focus: product),
+                child: const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    children: [
+                      Icon(Icons.auto_awesome,
+                          size: 18, color: KekiColors.pinkDeep),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Personalizar con IA',
+                          style: TextStyle(
+                              fontSize: 12.5, fontWeight: FontWeight.w600),
+                        ),
                       ),
-                    ),
-                    Icon(Icons.chevron_right_rounded,
-                        size: 18, color: KekiColors.text2),
-                  ],
+                      Icon(Icons.chevron_right_rounded,
+                          size: 18, color: KekiColors.text2),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

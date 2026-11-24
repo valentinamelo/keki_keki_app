@@ -9,18 +9,44 @@ import '../models/product.dart';
 /// Devuelve la etiqueta compartida por la ilustración en tarjeta y detalle.
 String artHeroTag(String productId) => 'art-$productId';
 
-/// Ilustración vectorial del producto, dibujada con CustomPainter a partir de
-/// los SVG de los mockups (lienzo de referencia 170 x 118).
+/// Imagen de un producto: su foto si tiene una ([image]) o, si no, la
+/// ilustración vectorial [kind] (dibujada con CustomPainter a partir de los
+/// SVG de los mockups, lienzo de referencia 170 x 118).
 class ProductArt extends StatelessWidget {
-  /// Crea la ilustración del tipo [kind].
-  const ProductArt({super.key, required this.kind});
+  /// Crea la imagen con la foto [image] o la ilustración [kind].
+  const ProductArt({super.key, required this.kind, this.image});
 
   final ArtKind kind;
 
-  /// Entrega al lienzo el pintor que dibuja el tipo de producto solicitado.
+  /// Ruta del asset con la foto; `null` usa la ilustración.
+  final String? image;
+
+  /// La foto se recorta al centro para llenar el espacio; si no se puede
+  /// cargar (por ejemplo, un asset que ya no existe) se dibuja la ilustración.
   @override
   Widget build(BuildContext context) {
-    return CustomPaint(painter: _ArtPainter(kind), size: Size.infinite);
+    final drawing =
+        CustomPaint(painter: _ArtPainter(kind), size: Size.infinite);
+    final path = image;
+    if (path == null || path.isEmpty) return drawing;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Se decodifica al tamaño en pantalla para no gastar memoria.
+        final ratio = MediaQuery.devicePixelRatioOf(context);
+        final width = constraints.maxWidth.isFinite
+            ? (constraints.maxWidth * ratio).round()
+            : null;
+        return SizedBox.expand(
+          child: Image.asset(
+            path,
+            fit: BoxFit.cover,
+            cacheWidth: width,
+            gaplessPlayback: true,
+            errorBuilder: (_, __, ___) => drawing,
+          ),
+        );
+      },
+    );
   }
 }
 
@@ -45,6 +71,8 @@ const _pink = _Palette(Color(0xFFFFF3F8), Color(0x40F7A9D2), Color(0xFFF3D3E6));
 const _blue = _Palette(Color(0xFFEEF8FC), Color(0x4092C7E1), Color(0xFFD7EBF4));
 const _brown =
     _Palette(Color(0xFFF5EDE6), Color(0x338B5E3C), Color(0xFFEADFD2));
+const _orange =
+    _Palette(Color(0xFFFFF4E8), Color(0x33E8913C), Color(0xFFF5DEC4));
 const _cream =
     _Palette(Color(0xFFFBF6E9), Color(0x33B98A3E), Color(0xFFEADFC0));
 
@@ -61,7 +89,11 @@ _Palette _paletteFor(ArtKind kind) {
     case ArtKind.brownie:
       return _brown;
     case ArtKind.cookies:
+    case ArtKind.creamCake:
+    case ArtKind.cinnamonRoll:
       return _cream;
+    case ArtKind.orangeCake:
+      return _orange;
   }
 }
 
@@ -103,7 +135,7 @@ void _drawCake(
   required List<_Dot> toppings,
 }) {
   final body = RRect.fromRectAndRadius(
-    Rect.fromLTWH(44, 58, 82, 40),
+    const Rect.fromLTWH(44, 58, 82, 40),
     const Radius.circular(9),
   );
   c.drawRRect(body, _fill(Colors.white));
@@ -131,13 +163,14 @@ void _drawCupcake(Canvas c, double cx, Color frosting, Color cherry) {
 /// Dibuja un brownie rectangular con cobertura y trozos decorativos.
 void _drawBrownie(Canvas c) {
   final body = RRect.fromRectAndRadius(
-    Rect.fromLTWH(46, 58, 78, 38),
+    const Rect.fromLTWH(46, 58, 78, 38),
     const Radius.circular(8),
   );
   c.drawRRect(body, _fill(const Color(0xFF8B5E3C)));
   c.save();
   c.clipRRect(body);
-  c.drawRect(Rect.fromLTWH(46, 58, 78, 12), _fill(const Color(0xFF5C3B22)));
+  c.drawRect(
+      const Rect.fromLTWH(46, 58, 78, 12), _fill(const Color(0xFF5C3B22)));
   c.restore();
   const nut = Color(0xFFD2A679);
   for (final p in const [Offset(62, 80), Offset(86, 84), Offset(108, 79)]) {
@@ -165,6 +198,27 @@ void _drawCookies(Canvas c) {
       c.drawCircle(Offset(cx + d.dx, 68 + d.dy), 2, _fill(chip));
     }
   }
+}
+
+/// Dibuja un rollo de canela visto desde arriba, centrado en [cx].
+void _drawCinnamonRoll(Canvas c, double cx) {
+  const cy = 78.0;
+  c.drawCircle(
+      const Offset(0, 0).translate(cx, cy), 19, _fill(const Color(0xFFD9A05B)));
+  final spiral = Path();
+  for (var t = 0.0; t <= 6 * math.pi; t += 0.2) {
+    final r = 2 + t * 0.85;
+    final p = Offset(cx + r * math.cos(t), cy + r * math.sin(t));
+    t == 0 ? spiral.moveTo(p.dx, p.dy) : spiral.lineTo(p.dx, p.dy);
+  }
+  c.drawPath(spiral, _line(const Color(0xFF8B5E3C), 2.4));
+  // Glaseado.
+  c.drawPath(
+    Path()
+      ..moveTo(cx - 12, cy - 8)
+      ..quadraticBezierTo(cx, cy - 2, cx + 12, cy - 9),
+    _line(Colors.white, 3),
+  );
 }
 
 class _ArtPainter extends CustomPainter {
@@ -250,6 +304,30 @@ class _ArtPainter extends CustomPainter {
         break;
       case ArtKind.cookies:
         _drawCookies(canvas);
+        break;
+      case ArtKind.creamCake:
+        _drawCake(canvas,
+            stroke: palette.stroke,
+            frosting: const Color(0xFFF6E7C1),
+            toppings: const [
+              _Dot(66, 54, 4, Color(0xFFFFFFFF)),
+              _Dot(85, 48, 6, Color(0xFFE9C98A)),
+              _Dot(104, 54, 4, Color(0xFFFFFFFF)),
+            ]);
+        break;
+      case ArtKind.orangeCake:
+        _drawCake(canvas,
+            stroke: palette.stroke,
+            frosting: const Color(0xFFFFC98A),
+            toppings: const [
+              _Dot(66, 53, 5, Color(0xFFF59A3C)),
+              _Dot(85, 47, 7, Color(0xFFF59A3C)),
+              _Dot(104, 53, 5, Color(0xFFF59A3C)),
+            ]);
+        break;
+      case ArtKind.cinnamonRoll:
+        _drawCinnamonRoll(canvas, 64);
+        _drawCinnamonRoll(canvas, 106);
         break;
     }
 
